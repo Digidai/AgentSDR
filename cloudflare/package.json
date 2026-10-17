@@ -1,0 +1,38 @@
+{
+  "name": "agentsdr-cloudflare",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "web:dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test && npm run build",
+    "deploy": "npm run build && wrangler deploy",
+    "db:local": "wrangler d1 migrations apply agentsdr-native --local",
+    "db:remote": "wrangler d1 migrations apply agentsdr-native --remote"
+  },
+  "dependencies": {
+    "hono": "^4.10.0",
+    "lucide-react": "^0.468.0",
+    "papaparse": "^5.5.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261016.1",
+    "@types/node": "^22",
+    "@types/papaparse": "^5.3.16",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9",
+    "vite": "^7",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.151.1"
+  }
+}

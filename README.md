@@ -1,3 +1,11 @@
+# AgentSDR · Cloudflare native fork
+
+This fork runs a new D1-native SDR application at **https://sdr.genedai.me**. It uses Cloudflare Workers, D1, R2, Queues, Cron and Workers AI. Start with **[cloudflare/README.md](cloudflare/README.md)** for setup, deployment and explicit porting limitations.
+
+The native application is in `cloudflare/` on the `cloudflare-native` branch. Upstream MIT-licensed source and history are preserved below and in the rest of the repository; upstream feature descriptions do not imply native-edition parity.
+
+---
+
 <div align="center">
 
 <a href="https://agentsdr.ai">
@@ -125,14 +133,14 @@ Also inside: a lead database with custom fields, CSV and XLSX import with merge 
 
 <p align="center"><sub>Each organization connects its own accounts in Settings, with a guided setup for every field. <a href="https://docs.agentsdr.ai/integrations">All integrations →</a></sub></p>
 
-| Service | Powers | Setup guide |
-|---|---|---|
-| Google Workspace | Sending and reading Gmail, through a service account | [Google Workspace](https://docs.agentsdr.ai/integrations/google-workspace) (with a 2-minute video) |
-| [Unipile](https://www.unipile.com) | LinkedIn and WhatsApp accounts, messaging and calling | [Unipile](https://docs.agentsdr.ai/integrations/unipile) |
-| [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) | Call recordings and contact photos | [Cloudflare R2](https://docs.agentsdr.ai/integrations/cloudflare-r2) |
-| [OpenRouter](https://openrouter.ai) | Every AI feature, on your own key and any model | [OpenRouter](https://docs.agentsdr.ai/integrations/openrouter) |
-| 15 enrichment providers | Tables columns | [Enrichment providers](https://docs.agentsdr.ai/integrations/enrichment-providers) |
-| [Resend](https://resend.com) | Sign-up, password-reset and invitation email | [Resend](https://docs.agentsdr.ai/integrations/resend) |
+| Service                                                            | Powers                                                | Setup guide                                                                                        |
+| ------------------------------------------------------------------ | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Google Workspace                                                   | Sending and reading Gmail, through a service account  | [Google Workspace](https://docs.agentsdr.ai/integrations/google-workspace) (with a 2-minute video) |
+| [Unipile](https://www.unipile.com)                                 | LinkedIn and WhatsApp accounts, messaging and calling | [Unipile](https://docs.agentsdr.ai/integrations/unipile)                                           |
+| [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) | Call recordings and contact photos                    | [Cloudflare R2](https://docs.agentsdr.ai/integrations/cloudflare-r2)                               |
+| [OpenRouter](https://openrouter.ai)                                | Every AI feature, on your own key and any model       | [OpenRouter](https://docs.agentsdr.ai/integrations/openrouter)                                     |
+| 15 enrichment providers                                            | Tables columns                                        | [Enrichment providers](https://docs.agentsdr.ai/integrations/enrichment-providers)                 |
+| [Resend](https://resend.com)                                       | Sign-up, password-reset and invitation email          | [Resend](https://docs.agentsdr.ai/integrations/resend)                                             |
 
 <a id="quick-start"></a>
 
@@ -175,18 +183,18 @@ With the demo seed, sign in as `demo@example.com` / `demo-password-123`.
 
 Environment variables cover only what the app needs before it can read its database. Everything else is per organization, in the app.
 
-| Variable | Required | Purpose |
-|---|---|---|
-| `DATABASE_URL` | yes | PostgreSQL 16+ connection string |
-| `BETTER_AUTH_SECRET` | yes | Signs sessions |
-| `BETTER_AUTH_URL` | yes | Public URL, read at runtime |
-| `INTEGRATION_CREDENTIALS_KEY` | yes | Encrypts integration credentials (AES-256-GCM) |
-| `UNSUBSCRIBE_SECRET` | for email | Signs unsubscribe links |
-| `CRON_SECRET`, `OUTREACH_TICK_SECRET` | no | Only to call the job endpoints from an external cron |
-| `RESEND_API_KEY`, `AUTH_EMAIL_FROM` | in production | Auth email through Resend |
-| `AUTH_SIGNUP` | no | `invite-only` (default) or `open` |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | no | "Continue with Google" |
-| `DB_POOL_MAX` | no | Connection pool size (default 8) |
+| Variable                                   | Required      | Purpose                                              |
+| ------------------------------------------ | ------------- | ---------------------------------------------------- |
+| `DATABASE_URL`                             | yes           | PostgreSQL 16+ connection string                     |
+| `BETTER_AUTH_SECRET`                       | yes           | Signs sessions                                       |
+| `BETTER_AUTH_URL`                          | yes           | Public URL, read at runtime                          |
+| `INTEGRATION_CREDENTIALS_KEY`              | yes           | Encrypts integration credentials (AES-256-GCM)       |
+| `UNSUBSCRIBE_SECRET`                       | for email     | Signs unsubscribe links                              |
+| `CRON_SECRET`, `OUTREACH_TICK_SECRET`      | no            | Only to call the job endpoints from an external cron |
+| `RESEND_API_KEY`, `AUTH_EMAIL_FROM`        | in production | Auth email through Resend                            |
+| `AUTH_SIGNUP`                              | no            | `invite-only` (default) or `open`                    |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | no            | "Continue with Google"                               |
+| `DB_POOL_MAX`                              | no            | Connection pool size (default 8)                     |
 
 Every variable, with how to generate it and where it is read: [Configuration reference](https://docs.agentsdr.ai/configuration).
 </details>
@@ -231,6 +239,7 @@ flowchart TB
     Unipile -- "webhooks" --> App
     Gmail -- "Pub/Sub push" --> App
 ```
+
 </details>
 
 <details>
@@ -250,13 +259,13 @@ docker/, docker-compose.yml     Self-hosting
 docs/                    Documentation (published at docs.agentsdr.ai)
 ```
 
-| Command | What it does |
-|---|---|
-| `bun run dev` | Start the app at http://localhost:3000 |
-| `bun run test` | 600+ unit tests |
-| `bun run typecheck` / `bun run lint` | Must pass before every commit |
-| `bun run db:setup` / `db:seed:demo` | Create the schema / a fictional demo organization |
-| `bun run db:check` | Audit that every table is organization-scoped |
+| Command                              | What it does                                      |
+| ------------------------------------ | ------------------------------------------------- |
+| `bun run dev`                        | Start the app at http://localhost:3000            |
+| `bun run test`                       | 600+ unit tests                                   |
+| `bun run typecheck` / `bun run lint` | Must pass before every commit                     |
+| `bun run db:setup` / `db:seed:demo`  | Create the schema / a fictional demo organization |
+| `bun run db:check`                   | Audit that every table is organization-scoped     |
 
 CI runs typecheck, lint, tests, a secret scan, the production build, the extension build and a fresh install on PostgreSQL 16, 17 and 18. See the [development guide](https://docs.agentsdr.ai/development).
 
@@ -310,7 +319,7 @@ Any model on OpenRouter, with your own key. Each call is pinned to the provider 
 <details>
 <summary><b>Does the AI send replies on its own?</b></summary>
 
-No. Drafts, including follow-up sequence steps, wait in *Action required* until someone sends them, as written or edited. The AI can move a lead forward in the pipeline when it is confident; anything else is held for a person.
+No. Drafts, including follow-up sequence steps, wait in _Action required_ until someone sends them, as written or edited. The AI can move a lead forward in the pipeline when it is confident; anything else is held for a person.
 </details>
 
 <details>
@@ -321,12 +330,12 @@ Yes. Invite teammates from Settings → Members with the owner, admin or member 
 
 ## Community and support
 
-| Where | Best for |
-|---|---|
-| [Docs](https://docs.agentsdr.ai) | Setup guides, every feature, troubleshooting |
-| [GitHub Discussions](https://github.com/Kandid-ai/AgentSDR/discussions) | Questions, ideas, and showing what you built |
-| [GitHub Issues](https://github.com/Kandid-ai/AgentSDR/issues/new/choose) | Bugs and feature requests (in the app: **Help → Report a bug**) |
-| [Security advisories](https://github.com/Kandid-ai/AgentSDR/security/advisories/new) | Vulnerabilities, reported privately |
+| Where                                                                                | Best for                                                        |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| [Docs](https://docs.agentsdr.ai)                                                     | Setup guides, every feature, troubleshooting                    |
+| [GitHub Discussions](https://github.com/Kandid-ai/AgentSDR/discussions)              | Questions, ideas, and showing what you built                    |
+| [GitHub Issues](https://github.com/Kandid-ai/AgentSDR/issues/new/choose)             | Bugs and feature requests (in the app: **Help → Report a bug**) |
+| [Security advisories](https://github.com/Kandid-ai/AgentSDR/security/advisories/new) | Vulnerabilities, reported privately                             |
 
 ## Contributing
 
@@ -348,6 +357,7 @@ The [LICENSE](LICENSE) file is the binding text.
 
 - The sign-in page photograph is by [Marek Piwnicki](https://unsplash.com/photos/w4sxddUJ5-0) on Unsplash.
 - Built on [Next.js](https://nextjs.org), [Drizzle](https://orm.drizzle.team), [Better Auth](https://www.better-auth.com), [AlignUI](https://www.alignui.com) and [Remix Icon](https://remixicon.com).
+
 </details>
 
 <div align="center">

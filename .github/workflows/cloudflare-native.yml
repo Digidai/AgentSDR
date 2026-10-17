@@ -1,0 +1,29 @@
+name: Cloudflare native
+on:
+  push:
+    branches: [cloudflare-native]
+    paths: ["cloudflare/**", ".github/workflows/cloudflare-native.yml"]
+  pull_request:
+    paths: ["cloudflare/**", ".github/workflows/cloudflare-native.yml"]
+permissions:
+  contents: read
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: cloudflare/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm audit
+      - run: npx wrangler deploy --dry-run

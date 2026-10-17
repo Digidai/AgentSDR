@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "cloudflare/**",
   ]),
   {
     // scripts/*.js are the historical CommonJS migrations, run with plain

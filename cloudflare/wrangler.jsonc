@@ -1,0 +1,48 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "agentsdr-native",
+  "account_id": "48d9ccaf5ee7914c803b5d0656462848",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "routes": [{ "pattern": "sdr.genedai.me", "custom_domain": true }],
+  "assets": {
+    "directory": "dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true,
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "agentsdr-native",
+      "database_id": "6f1a38df-84f6-4bbd-b665-2ca0e720d17e",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "agentsdr-native-media" },
+  ],
+  "queues": {
+    "producers": [{ "binding": "TASKS", "queue": "agentsdr-native-tasks" }],
+    "consumers": [
+      {
+        "queue": "agentsdr-native-tasks",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_retries": 3,
+        "dead_letter_queue": "agentsdr-native-dead",
+      },
+    ],
+  },
+  "ai": { "binding": "AI" },
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "vars": {
+    "APP_URL": "https://sdr.genedai.me",
+    "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    "RELEASE": "development",
+  },
+  "limits": { "cpu_ms": 30000 },
+  "observability": { "enabled": true },
+}

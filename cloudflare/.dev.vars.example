@@ -1,0 +1,4 @@
+APP_URL=http://localhost:8787
+BOOTSTRAP_TOKEN=replace-with-a-random-32-byte-secret
+ENCRYPTION_KEY=replace-with-another-random-32-byte-secret
+UNSUBSCRIBE_SECRET=replace-with-another-random-32-byte-secret

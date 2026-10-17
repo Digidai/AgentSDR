@@ -1,0 +1,13 @@
+/* Local fallback is intentional: no external requests or tracking on a private workspace. */
+@font-face {
+  font-family: "Manrope";
+  src: local("Avenir Next");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DM Sans";
+  src: local("Avenir Next");
+  font-weight: 100 900;
+  font-display: swap;
+}
