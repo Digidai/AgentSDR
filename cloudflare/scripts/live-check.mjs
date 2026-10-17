@@ -313,7 +313,9 @@ try {
   }
   for (const f of await files("dist")) {
     const relative = f.slice(5);
-    const remote = await request("/" + relative);
+    // Workers Assets canonically redirects /index.html to /. Keep the
+    // authenticated fetch for the recorder ZIP while comparing the real index.
+    const remote = await request(relative === "index.html" ? "/" : "/" + relative);
     let bytes = Buffer.from(await remote.arrayBuffer());
     if (relative === "index.html") {
       // Cloudflare's zone-level JavaScript Detection injects one dynamic

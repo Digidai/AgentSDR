@@ -33,3 +33,7 @@ Implement categories/subcategories, immutable published sequence versions, per-s
 Run unit/integration tests using local D1/R2 and provider fixtures; include cross-tenant/role access, stale queue work, at-least-once delivery, Gmail parsing/cursors, acceptance gates, multipart capabilities and formula isolation. Run real Worker/WASM smoke checks, TypeScript, frontend/extension builds, dependency audit, Wrangler dry-run and GitHub CI. Apply additive remote migration and deploy an exact pushed SHA to sdr.genedai.me. Do not use the old fresh-install smoke check once an owner exists. Record feature implementation, fixture coverage and real-provider verification separately.
 
 A provider account that has not been supplied prevents a real-provider test, not implementation. Report remaining unverified paths accurately and continue all independent work. Never mark full parity merely from a route count, retained upstream source or green mocks.
+
+## Completion
+
+All six migration phases completed. Native code commit `f16a389a9a425fb9ee17fd73025c88a90ebd3c91` is pushed, CI green and deployed at 100% on the requested hostname. Additive migration 0002 applied after a private backup. Local checks: 186 tests, 8 compiled-workerd checks, 0 audit vulnerabilities; root typecheck and lint (6 existing warnings) passed. Production: 32 successful checks, synthetic data removed, private owner setup retained. Actual provider sends/calls and browser interaction remain explicitly unverified acceptance boundaries, not code-migration omissions.

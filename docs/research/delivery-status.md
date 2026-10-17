@@ -20,7 +20,11 @@ The native APIs are redesigned; legacy Next.js clients are not wire compatible. 
 
 ## Release state
 
-Implementation is ready for release; push, CI, migration 0002 and production deployment are being completed in this continuation. `deployment.json` and `live-verification.json` still identify the previous live runtime until the new deployment is verified. Historical evidence for `d9c3fa2` is preserved in `history/`.
+Production is deployed at **https://sdr.genedai.me** from exact pushed code SHA `f16a389a9a425fb9ee17fd73025c88a90ebd3c91`. Worker version `3b3f5776-b187-4adb-a432-256a9f155a01` receives 100% traffic. GitHub Actions [39047228392](https://github.com/Digidai/AgentSDR/actions/runs/39047228392) succeeded on that SHA. Remote additive migration `0002_upstream_parity.sql` applied successfully (78 commands); the pre-migration export remains private and ignored.
+
+The final live report passed **32 checks**, including exact release SHA, real Workers AI → Queue → D1 draft, no automatic send, 15/84 catalog coverage, real QuickJS/FormulaJS preview and queued execution, immutable CRM version publication, teams, recorder bearer acceptance/rejection, authenticated recorder ZIP, private R2, CSP and all built asset hashes. `/index.html` is a canonical redirect to `/`; the checker compares `/` and strips only the known Cloudflare JSD transform. The recorder ZIP is compared with an authenticated request.
+
+Only the synthetic verification organization/account/data were removed. Owner setup remains available with the original private bootstrap token. `deployment.json` and `live-verification.json` hold current evidence; `history/` preserves the prior `d9c3fa2` deployment proof. A later verification-script/documentation closeout does not change the deployed runtime SHA.
 
 ## Infrastructure
 
