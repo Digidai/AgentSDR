@@ -1,0 +1,33 @@
+{
+  "host": "https://sdr.genedai.me",
+  "release": "d9c3fa27bf85f5367aa258ea3b79ba82422ca9ec",
+  "checked_at": "2026-10-17T14:34:11.402Z",
+  "checks": [
+    "HTTPS health and exact release SHA",
+    "Private API returns 401",
+    "Public bootstrap rejects invalid secret",
+    "Owner setup and secure session cookie",
+    "Cross-origin mutation denied",
+    "D1 authenticated write and read",
+    "Real Workers AI + Queue + D1 draft",
+    "No automatic message send",
+    "Unconfigured outbound cannot start",
+    "D1 enrichment table persistence",
+    "Private R2 upload and authenticated retrieval",
+    "R2 unauthenticated access blocked",
+    "Integration secrets absent from API",
+    "Homepage and CSP",
+    "Asset SHA256 assets/index-671cR7Y5.js",
+    "Asset SHA256 assets/index-Ci_PSIF7.css",
+    "Asset SHA256 assets/xlsx-YQ4lDkt_.js",
+    "Asset SHA256 favicon.svg",
+    "Asset SHA256 fonts.css",
+    "HTML SHA256 after known Cloudflare JSD transform index.html",
+    "Robots excludes private app",
+    "Production ready for private owner setup"
+  ],
+  "syntheticWorkspaceRemoved": true,
+  "providerSendTested": false,
+  "browserInteractionTested": false,
+  "success": true
+}

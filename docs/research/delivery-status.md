@@ -20,7 +20,7 @@ React workspace and Worker API; private owner bootstrap and sessions; scoped peo
 
 ## Verification
 
-TypeScript, 24 focused unit/API/task tests, production frontend build, Wrangler dry-run, and npm audit pass. Tests use real local D1/R2 emulation and mock provider/model responses. Remote deployment, exact asset checks and real Workers AI proof will be recorded separately in live-verification.json; local tests alone do not prove production.
+TypeScript, 24 focused unit/API/task tests, production frontend build, Wrangler dry-run, and npm audit pass. Tests use real local D1/R2 emulation and mock provider/model responses. Upstream root TypeScript also passed; upstream lint completed with six existing warnings and no errors. Production release `d9c3fa27bf85f5367aa258ea3b79ba82422ca9ec` is live as Worker version `b20e2346-eb58-4052-b2ff-42fdcf10d8d4` (100% traffic). GitHub Actions run 39041143468 passed on that exact SHA. The live verification report records 22 passing checks: real Workers AI through Queues produced a persisted editable draft, no automatic send occurred, authenticated D1/R2 operations worked, private routes/attachments were denied to anonymous callers, cross-origin mutations were blocked, and application assets matched the build. HTML is compared after removing the observed zone-level Cloudflare JavaScript Detection injection. Synthetic test organization/account/data were removed; owner initialization remains available. See live-verification.json and deployment.json. A later documentation/verification-script closeout commit does not represent a different deployed runtime.
 
 ## Not configured or not verified
 

@@ -3,9 +3,11 @@ import { createHash, randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 const base = "https://sdr.genedai.me";
-const expected = execFileSync("git", ["rev-parse", "HEAD"], {
-  encoding: "utf8",
-}).trim();
+const expected =
+  process.argv.find((value) => value.startsWith("--release="))?.slice(10) ||
+  execFileSync("git", ["rev-parse", "HEAD"], {
+    encoding: "utf8",
+  }).trim();
 const secrets = JSON.parse(await readFile(".secrets.production.json", "utf8"));
 const checks = [];
 let cookie = "",
@@ -238,12 +240,30 @@ try {
   for (const f of await files("dist")) {
     const relative = f.slice(5);
     const remote = await fetch(base + "/" + relative);
+    let bytes = Buffer.from(await remote.arrayBuffer());
+    if (relative === "index.html") {
+      // Cloudflare's zone-level JavaScript Detection injects one dynamic
+      // challenge script. Compare every original byte after removing only
+      // that observed script; all application JS/CSS still require exact SHA.
+      const html = bytes
+        .toString("utf8")
+        .replace(
+          /<script>\(function\(\)\{function c\(\)\{[\s\S]*?<\/script>/g,
+          (script) =>
+            script.includes(
+              "/cdn-cgi/challenge-platform/scripts/jsd/main.js",
+            ) && script.includes("window.__CF$cv$params")
+              ? ""
+              : script,
+        );
+      bytes = Buffer.from(html);
+    }
     check(
-      "Asset SHA256 " + relative,
+      (relative === "index.html"
+        ? "HTML SHA256 after known Cloudflare JSD transform "
+        : "Asset SHA256 ") + relative,
       remote.ok &&
-        createHash("sha256")
-          .update(Buffer.from(await remote.arrayBuffer()))
-          .digest("hex") ===
+        createHash("sha256").update(bytes).digest("hex") ===
           createHash("sha256")
             .update(await readFile(f))
             .digest("hex"),

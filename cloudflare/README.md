@@ -63,6 +63,8 @@ npm run deploy
 
 Secret JSON contains `ENCRYPTION_KEY`, `UNSUBSCRIBE_SECRET`, and `BOOTSTRAP_TOKEN`. Keep it outside version control with filesystem mode 0600. The account, database, R2 bucket, queues and custom hostname are declared in `wrangler.jsonc`. Adapt these when using a different Cloudflare account. Never apply this fork's migrations to the upstream PostgreSQL database or another product's D1 database.
 
+The installed version and asset/inference proof are recorded in `docs/research/deployment.json` and `live-verification.json`. The operator-only `node scripts/live-check.mjs --release=<deployed-sha>` performs a fresh-install smoke test only when no owner exists, then removes its own synthetic workspace. It requires local Cloudflare credentials and ignored deployment secrets; do not run it after initializing a real workspace.
+
 `npm run check` runs TypeScript, unit/API/task tests against real local D1/R2 emulation, and the production frontend build. Tests cover tenant/role boundaries, setup races, session revocation, webhook deduplication, follow-up stops, send idempotency, uncertain delivery, encryption, opt-out, enrichment and private files. See [delivery status](../docs/research/delivery-status.md) for actual release evidence and remaining verification.
 
 ## Operational behavior
