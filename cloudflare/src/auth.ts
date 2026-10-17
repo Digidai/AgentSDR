@@ -31,7 +31,7 @@ export async function identity(c: Ctx) {
   const raw = getCookie(c, "sdr_session");
   if (!raw) return null;
   return c.env.DB.prepare(
-    "SELECT u.id,u.name,u.email,s.org_id,m.role FROM sessions s JOIN users u ON u.id=s.user_id JOIN members m ON m.user_id=u.id AND m.org_id=s.org_id WHERE s.token_hash=? AND s.expires_at>?",
+    "SELECT u.id,u.name,u.email,s.org_id,m.role,o.name org_name FROM sessions s JOIN organizations o ON o.id=s.org_id JOIN users u ON u.id=s.user_id JOIN members m ON m.user_id=u.id AND m.org_id=s.org_id WHERE s.token_hash=? AND s.expires_at>?",
   )
     .bind(await digest(raw), now())
     .first<Identity>();
@@ -49,7 +49,7 @@ export function requireAdmin(c: Ctx) {
       message: "An administrator account is required",
     });
 }
-async function session(c: Ctx, user: Identity | Row) {
+export async function session(c: Ctx, user: Identity | Row) {
   const raw = token();
   await c.env.DB.prepare(
     "INSERT INTO sessions(token_hash,user_id,org_id,expires_at) VALUES(?,?,?,?)",
@@ -138,7 +138,7 @@ authRoutes.post("/login", async (c) => {
   if (String(body.password || "").length > 128)
     throw new HTTPException(400, { message: "Invalid credentials" });
   const user = await c.env.DB.prepare(
-    "SELECT u.*,m.org_id,m.role FROM users u JOIN members m ON m.user_id=u.id WHERE u.email=? LIMIT 1",
+    "SELECT u.*,m.org_id,m.role FROM users u JOIN members m ON m.user_id=u.id WHERE u.email=? ORDER BY m.rowid LIMIT 1",
   )
     .bind(email)
     .first<Row>();

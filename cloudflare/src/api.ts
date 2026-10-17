@@ -1,3 +1,6 @@
+import { purgePersonMedia } from "./features/shared";
+import { receive } from "./inbound";
+import { publicFeatures, featureRoutes } from "./features/runtime";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { bodyLimit } from "hono/body-limit";
@@ -27,6 +30,9 @@ app.use("*", async (c, next) => {
   if (
     !["GET", "HEAD", "OPTIONS"].includes(method) &&
     !path.startsWith("/api/webhooks/") &&
+    !path.startsWith("/api/channel-webhooks/") &&
+    !path.startsWith("/api/outreach/webhooks/gmail-watch") &&
+    !path.startsWith("/api/call-recorder/") &&
     !path.startsWith("/u/")
   ) {
     const origin = c.req.header("Origin");
@@ -41,7 +47,8 @@ app.use("*", async (c, next) => {
       ["POST", "PUT", "PATCH"].includes(method) &&
       path.startsWith("/api/") &&
       !c.req.header("Content-Type")?.startsWith("application/json") &&
-      !path.startsWith("/api/files")
+      !path.startsWith("/api/files") &&
+      !/^\/api\/calling\/contacts\/[^/]+\/photo$/.test(path)
     )
       throw new HTTPException(415, { message: "Use JSON requests" });
   }
@@ -85,6 +92,7 @@ app.get("/api/health", async (c) => {
     release: c.env.RELEASE || "development",
   });
 });
+app.route("/api", publicFeatures);
 app.route("/api/auth", authRoutes);
 
 const stages = [
@@ -238,6 +246,52 @@ api.post("/people/import", async (c) => {
     Array.isArray(b.rows) && b.rows.length > 0 && b.rows.length <= 1000,
     "Import between 1 and 1,000 rows per request",
   );
+  if (b.mode === "merge") {
+    let created = 0,
+      updated = 0;
+    const failed: Row[] = [];
+    for (const [index, row] of b.rows.entries())
+      try {
+        const v = personValues(row);
+        let old = await c.env.DB.prepare(
+          "SELECT * FROM people WHERE org_id=? AND ((? IS NOT NULL AND email=?) OR (?<>'' AND linkedin=?)) LIMIT 1",
+        )
+          .bind(c.get("user").org_id, v[1], v[1], v[5], v[5])
+          .first<Row>();
+        if (old) {
+          const merge = personValues({
+            ...old,
+            ...Object.fromEntries(
+              Object.entries(row).filter(
+                ([, v]) => v !== "" && v !== null && v !== undefined,
+              ),
+            ),
+            dnc: old.dnc || row.dnc,
+            tags: json(old.tags, []),
+            custom: { ...json<Row>(old.custom, {}), ...row.custom },
+          });
+          await c.env.DB.prepare(
+            "UPDATE people SET name=?,email=?,company=?,title=?,phone=?,linkedin=?,website=?,stage=?,dnc=?,notes=?,tags=?,custom=?,updated_at=? WHERE id=? AND org_id=?",
+          )
+            .bind(...merge, now(), old.id, c.get("user").org_id)
+            .run();
+          updated++;
+        } else {
+          await c.env.DB.prepare(
+            "INSERT INTO people(id,org_id,name,email,company,title,phone,linkedin,website,stage,dnc,notes,tags,custom) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+          )
+            .bind(id(), c.get("user").org_id, ...v)
+            .run();
+          created++;
+        }
+      } catch (error) {
+        failed.push({
+          row: index + 2,
+          error: text((error as Error).message, 200),
+        });
+      }
+    return c.json({ created, updated, failed, total: b.rows.length });
+  }
   const rows = b.rows.map((x: Row) => ({ id: id(), values: personValues(x) }));
   let imported = 0;
   for (let i = 0; i < rows.length; i += 50) {
@@ -261,11 +315,16 @@ api.post("/people/import", async (c) => {
 });
 api.get("/people/export", async (c) => {
   const result = await c.env.DB.prepare(
-    "SELECT name,email,company,title,phone,linkedin,website,stage,dnc,notes FROM people WHERE org_id=? ORDER BY created_at LIMIT 20000",
+    "SELECT name,email,company,title,phone,linkedin,website,stage,dnc,notes,custom FROM people WHERE org_id=? ORDER BY created_at LIMIT 20000",
   )
     .bind(c.get("user").org_id)
     .all();
-  return c.json({ items: result.results });
+  return c.json({
+    items: result.results.map(({ custom, ...r }) => ({
+      ...json<Row>(custom as string, {}),
+      ...r,
+    })),
+  });
 });
 api.get("/people/:id", async (c) => {
   const p = await scoped(c, "people", c.req.param("id"));
@@ -305,23 +364,27 @@ api.patch("/people/:id", async (c) => {
   )
     .bind(...v, now(), old.id, old.org_id)
     .run();
-  if (v[8])
+  if (v[8]) {
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        "UPDATE crm_enrollments SET status='stopped' WHERE org_id=? AND person_id=? AND status IN ('active','paused')",
+      ).bind(old.org_id, old.id),
+      c.env.DB.prepare(
+        "UPDATE drafts SET status='discarded' WHERE org_id=? AND person_id=? AND status='pending'",
+      ).bind(old.org_id, old.id),
+    ]);
     await c.env.DB.prepare(
       "UPDATE enrollments SET status='stopped' WHERE org_id=? AND person_id=? AND status='active'",
     )
       .bind(old.org_id, old.id)
       .run();
+  }
   await event(c.env, old.org_id, "lead.updated", `Updated ${v[0]}`, old.id);
   return c.json({ ok: true });
 });
 api.delete("/people/:id", async (c) => {
   await scoped(c, "people", c.req.param("id"));
-  const files = await c.env.DB.prepare(
-    "SELECT object_key FROM files WHERE org_id=? AND person_id=?",
-  )
-    .bind(c.get("user").org_id, c.req.param("id"))
-    .all<{ object_key: string }>();
-  for (const f of files.results) await c.env.MEDIA.delete(f.object_key);
+  await purgePersonMedia(c.env, c.get("user").org_id, c.req.param("id"));
   await c.env.DB.prepare("DELETE FROM people WHERE id=? AND org_id=?")
     .bind(c.req.param("id"), c.get("user").org_id)
     .run();
@@ -343,13 +406,16 @@ api.get("/campaigns", async (c) => {
     .all();
   return c.json({ items: rows.results });
 });
-function validateSteps(input: unknown) {
+function validateSteps(input: unknown, channel?: string) {
   check(
-    Array.isArray(input) && input.length > 0 && input.length <= 12,
-    "Add between 1 and 12 sequence steps",
+    Array.isArray(input) && input.length > 0 && input.length <= 20,
+    "Add between 1 and 20 sequence steps",
   );
   return (input as Row[]).map((s, i) => {
-    check(text(s.body, 10000), "Each step needs a message");
+    check(
+      text(s.body, 10000) || (channel === "linkedin" && s.action === "invite"),
+      "Each step needs a message",
+    );
     const delay = Number(s.delay_minutes) || 0;
     check(delay >= 0 && delay <= 525600, "Invalid sequence delay");
     return {
@@ -366,13 +432,22 @@ api.post("/campaigns", async (c) => {
   const b = await c.req.json<Row>();
   check(text(b.name, 200), "Campaign name is required");
   check(channels.includes(b.channel), "Choose a channel");
-  const steps = validateSteps(b.steps),
+  const steps = validateSteps(b.steps, b.channel),
     cid = id(),
     org = c.get("user").org_id;
   check(
     !steps.some((s) => s.action === "invite") || b.channel === "linkedin",
     "Only LinkedIn supports invitations",
   );
+  if (b.account_id) {
+    const a = await c.env.DB.prepare(
+      "SELECT id FROM channel_accounts WHERE org_id=? AND channel=? AND (id=? OR external_id=?)",
+    )
+      .bind(c.get("user").org_id, b.channel, b.account_id, b.account_id)
+      .first<Row>();
+    check(a, "Connect the sending account to this workspace first");
+    b.account_id = a!.id;
+  }
   await c.env.DB.batch([
     c.env.DB.prepare(
       "INSERT INTO campaigns(id,org_id,name,channel,provider,account_id,from_address,daily_limit) VALUES(?,?,?,?,?,?,?,?)",
@@ -417,6 +492,13 @@ api.get("/campaigns/:id", async (c) => {
     ...campaign,
     steps: steps.results,
     enrollments: enrollments.results,
+    accounts: (
+      await c.env.DB.prepare(
+        "SELECT account_id FROM campaign_accounts WHERE campaign_id=?",
+      )
+        .bind(campaign.id)
+        .all<Row>()
+    ).results.map((a) => a.account_id),
   });
 });
 api.patch("/campaigns/:id", async (c) => {
@@ -629,6 +711,7 @@ api.get("/tables/:id", async (c) => {
     columns: json(table.columns, []),
     rows: rows.results.map((r) => ({
       ...r,
+      cell_meta: json(r.cell_meta as string, {}),
       cells: json(r.cells as string, {}),
     })),
   });
@@ -672,17 +755,24 @@ api.post("/tables/:id/rows", async (c) => {
     Array.isArray(b.rows) && b.rows.length > 0 && b.rows.length <= 500,
     "Add between 1 and 500 rows",
   );
-  for (let i = 0; i < b.rows.length; i += 50) {
+  const inserted = b.rows.map((cells: Row) => ({ rid: id(), cells }));
+  for (let i = 0; i < inserted.length; i += 50) {
     await c.env.DB.batch(
-      b.rows
+      inserted
         .slice(i, i + 50)
         .map((row: Row) =>
           c.env.DB.prepare(
             "INSERT INTO table_rows(id,org_id,table_id,cells) VALUES(?,?,?,?)",
-          ).bind(id(), table.org_id, table.id, JSON.stringify(row)),
+          ).bind(row.rid, table.org_id, table.id, JSON.stringify(row.cells)),
         ),
     );
   }
+  if (table.auto_run)
+    for (const r of inserted)
+      await enqueue(c.env, table.org_id, "table-row", {
+        table_id: table.id,
+        row_id: r.rid,
+      });
   return c.json({ ok: true });
 });
 api.post("/tables/:id/run", async (c) => {
@@ -877,6 +967,9 @@ api.delete("/members/:id", async (c) => {
       c.get("user").org_id,
       c.req.param("id"),
     ),
+    c.env.DB.prepare(
+      "DELETE FROM team_members WHERE user_id=? AND team_id IN (SELECT id FROM teams WHERE org_id=?)",
+    ).bind(c.req.param("id"), c.get("user").org_id),
     c.env.DB.prepare("DELETE FROM sessions WHERE org_id=? AND user_id=?").bind(
       c.get("user").org_id,
       c.req.param("id"),
@@ -1001,92 +1094,6 @@ api.delete("/files/:id", async (c) => {
   return c.json({ ok: true });
 });
 
-export async function receive(
-  env: Env,
-  org: string,
-  channel: string,
-  body: Row,
-) {
-  const externalId = text(body.external_id || body.message_id || body.id, 300);
-  if (!externalId)
-    throw new HTTPException(400, {
-      message: "A unique external_id is required",
-    });
-  if (body.is_sender === true || body.is_sender === 1) return { ignored: true };
-  let person: Row | null = null;
-  if (body.person_id)
-    person = await env.DB.prepare(
-      "SELECT * FROM people WHERE org_id=? AND id=?",
-    )
-      .bind(org, text(body.person_id, 100))
-      .first<Row>();
-  if (!person && body.email)
-    person = await env.DB.prepare(
-      "SELECT * FROM people WHERE org_id=? AND email=?",
-    )
-      .bind(org, text(body.email, 254).toLowerCase())
-      .first<Row>();
-  if (!person && body.phone)
-    person = await env.DB.prepare(
-      "SELECT * FROM people WHERE org_id=? AND REPLACE(REPLACE(REPLACE(phone,' ',''),'-',''),'+','')=?",
-    )
-      .bind(org, String(body.phone).replace(/\D/g, ""))
-      .first<Row>();
-  if (!person && body.sender?.attendee_provider_id) {
-    const phone = String(body.sender.attendee_provider_id)
-      .split("@")[0]
-      .split(":")[0];
-    person = await env.DB.prepare(
-      "SELECT * FROM people WHERE org_id=? AND (REPLACE(REPLACE(REPLACE(phone,' ',''),'-',''),'+','')=? OR json_extract(custom,'$.linkedin_provider_id')=?)",
-    )
-      .bind(org, phone, body.sender.attendee_provider_id)
-      .first<Row>();
-  }
-  if (!person) return { ignored: true, reason: "No matching lead" };
-  const message = text(body.body || body.message || body.text, 10000);
-  if (!message) return { ignored: true, reason: "No message content" };
-  const mid = id();
-  const result = await env.DB.prepare(
-    "INSERT OR IGNORE INTO webhook_receipts(org_id,external_id) VALUES(?,?)",
-  )
-    .bind(org, `${channel}:${externalId}`)
-    .run();
-  if (!result.meta.changes) return { duplicate: true };
-  try {
-    await env.DB.batch([
-      env.DB.prepare(
-        "INSERT INTO messages(id,org_id,person_id,channel,direction,subject,body,status,external_id) VALUES(?,?,?,?,'inbound',?,?,'received',?)",
-      ).bind(
-        mid,
-        org,
-        person.id,
-        channel,
-        text(body.subject, 300),
-        message,
-        externalId,
-      ),
-      env.DB.prepare(
-        "UPDATE enrollments SET status='replied' WHERE org_id=? AND person_id=? AND status='active'",
-      ).bind(org, person.id),
-    ]);
-  } catch (e) {
-    await env.DB.prepare(
-      "DELETE FROM webhook_receipts WHERE org_id=? AND external_id=?",
-    )
-      .bind(org, `${channel}:${externalId}`)
-      .run();
-    throw e;
-  }
-  await enqueue(env, org, "crm", { person_id: person.id, message_id: mid });
-  await event(
-    env,
-    org,
-    "message.received",
-    `Reply received via ${channel}`,
-    person.id,
-  );
-  return { ok: true };
-}
 app.post("/api/webhooks/:org/:channel", async (c) => {
   const org = c.req.param("org"),
     channel = c.req.param("channel");
@@ -1125,6 +1132,12 @@ async function unsubscribe(c: any) {
       c.env.DB.prepare(
         "UPDATE enrollments SET status='stopped' WHERE org_id=? AND person_id=? AND status='active'",
       ).bind(org, person),
+      c.env.DB.prepare(
+        "UPDATE crm_enrollments SET status='stopped' WHERE org_id=? AND person_id=? AND status IN ('active','paused')",
+      ).bind(org, person),
+      c.env.DB.prepare(
+        "UPDATE drafts SET status='discarded' WHERE org_id=? AND person_id=? AND status IN ('pending','queued')",
+      ).bind(org, person),
     ];
     if (p.email)
       statements.push(
@@ -1157,6 +1170,13 @@ app.get("/u/:org/:person", async (c) => {
 });
 app.post("/u/:org/:person", unsubscribe);
 app.get("/robots.txt", (c) => c.text("User-agent: *\nDisallow: /\n"));
+app.get("/downloads/call-recorder", requireUser, (c) =>
+  c.env.ASSETS.fetch(
+    new Request(new URL("/recorder.zip", c.req.url), c.req.raw),
+  ),
+);
+app.get("/recorder.zip", requireUser, (c) => c.env.ASSETS.fetch(c.req.raw));
+app.route("/api", featureRoutes);
 app.route("/api", api);
 app.all("/api/*", (c) => c.json({ error: "Endpoint not found" }, 404));
 app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));

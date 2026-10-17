@@ -1,0 +1,2091 @@
+{
+  "upstream": "Kandid-ai/AgentSDR",
+  "commit": "bdbf5efd2017347181f5bf549b54d89c1ae6e5f5",
+  "route_files": 203,
+  "items": [
+    {
+      "upstream_file": "src/app/api/ai/openrouter/models/route.ts",
+      "native_family": "ai",
+      "native_implementation": [
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/ai/openrouter/settings/route.ts",
+      "native_family": "ai",
+      "native_implementation": [
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/analytics/[view]/route.ts",
+      "native_family": "analytics",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/apps/list/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/auth/[...all]/route.ts",
+      "native_family": "identity",
+      "native_implementation": [
+        "cloudflare/src/auth.ts",
+        "cloudflare/src/features/identity.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/call-recorder/calls/[id]/finish/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/call-recorder/calls/[id]/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/call-recorder/calls/[id]/started/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/call-recorder/calls/[id]/upload-url/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calling/campaigns/[id]/contacts/import/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calling/campaigns/[id]/contacts/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calling/campaigns/[id]/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calling/campaigns/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calling/contacts/[id]/messages/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calling/contacts/[id]/person/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calling/contacts/[id]/photo/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calling/contacts/[id]/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calling/contacts/[id]/stage/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calling/overview/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calling/photos/[personId]/[file]/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calls/[id]/cancel/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calls/[id]/recording/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calls/[id]/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calls/[id]/transcribe/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/calls/route.ts",
+      "native_family": "calling",
+      "native_implementation": [
+        "cloudflare/src/features/calls.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/campaigns/[id]/export/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/campaigns/[id]/output/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/campaigns/[id]/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/campaigns/[id]/run/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/campaigns/[id]/stop/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/campaigns/[id]/stream/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/campaigns/export/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/campaigns/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/categories/counts/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/actions/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/categories/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/classifications/[id]/acknowledge/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/classifications/[id]/undo/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/drafts/[id]/discard/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/drafts/[id]/regenerate/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/drafts/[id]/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/drafts/[id]/send/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/identity-exceptions/[id]/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/identity-exceptions/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/knowledge/[id]/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/knowledge/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/overview/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/people/[personId]/dnc/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/records/[id]/[action]/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/records/[id]/classification/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/records/[id]/draft/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/records/[id]/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/records/[id]/sequence/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/records/[id]/stage/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/send-attempts/[id]/reconcile/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/sequences/[id]/publish/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/sequences/[id]/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/sequences/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/settings/ai-instructions/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/subcategories/[id]/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/subcategories/[id]/sequence/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/crm/subcategories/route.ts",
+      "native_family": "crm",
+      "native_implementation": [
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/debug-env/route.ts",
+      "native_family": "safe-health",
+      "native_implementation": [
+        "cloudflare/src/api.ts"
+      ],
+      "scope": "sensitive debug endpoint omitted; health endpoint used"
+    },
+    {
+      "upstream_file": "src/app/api/domains/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/export/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/ai/connections/[connectionId]/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/ai/providers/[providerKey]/connections/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/folders/[folderId]/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/folders/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/integrations/[integrationKey]/connections/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/ai/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/campaigns/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/cell-details/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/cells/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/changes/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/columns/[columnId]/dedupe/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/columns/[columnId]/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/columns/[columnId]/text-to-columns/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/columns/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/duplicate/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/enrichments/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/export/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/formula-generate/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/formula-preview/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/import/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/rows/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/run/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/[tableId]/selection/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/tables/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/workbooks/[workbookId]/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/workbooks/[workbookId]/tables/reorder/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/grid/workbooks/route.ts",
+      "native_family": "tables",
+      "native_implementation": [
+        "cloudflare/src/features/tables.ts",
+        "cloudflare/src/features/formula.ts",
+        "cloudflare/src/features/ai.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/leads/columns/[id]/route.ts",
+      "native_family": "leads",
+      "native_implementation": [
+        "cloudflare/src/api.ts",
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/leads/columns/[id]/type-preview/route.ts",
+      "native_family": "leads",
+      "native_implementation": [
+        "cloudflare/src/api.ts",
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/leads/columns/route.ts",
+      "native_family": "leads",
+      "native_implementation": [
+        "cloudflare/src/api.ts",
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/leads/companies/route.ts",
+      "native_family": "leads",
+      "native_implementation": [
+        "cloudflare/src/api.ts",
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/leads/companies/suggest/route.ts",
+      "native_family": "leads",
+      "native_implementation": [
+        "cloudflare/src/api.ts",
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/leads/people/import/route.ts",
+      "native_family": "leads",
+      "native_implementation": [
+        "cloudflare/src/api.ts",
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/leads/people/import/template/route.ts",
+      "native_family": "leads",
+      "native_implementation": [
+        "cloudflare/src/api.ts",
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/leads/people/route.ts",
+      "native_family": "leads",
+      "native_implementation": [
+        "cloudflare/src/api.ts",
+        "cloudflare/src/features/crm.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/accounts/[id]/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/accounts/hosted-auth/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/accounts/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/accounts/sync/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/analytics/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/campaigns/[id]/chart-data/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/campaigns/[id]/merge-fields/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/campaigns/[id]/people/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/campaigns/[id]/preview/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/campaigns/[id]/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/campaigns/[id]/template/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/campaigns/[id]/upload/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/campaigns/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/jobs/[id]/logs/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/jobs/replay-webhooks/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/jobs/reset-daily-limits/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/jobs/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/jobs/run-outreach/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/jobs/run-search-queue/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/leads/[id]/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/leads/bulk-delete/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/leads/ids/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/leads/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/leads/template/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/leads/upload/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/messages/connections/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/messages/crm-context/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/messages/send/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/messages/thread/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/messages/unread-replied-count/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/search/batches/[id]/leads/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/search/batches/[id]/queries/rerun/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/search/batches/[id]/queries/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/search/batches/[id]/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/search/batches/[id]/run/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/search/batches/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/search/batches/upload/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/search/queue/[id]/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/search/queue/results/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/linkedin/search/queue/template/route.ts",
+      "native_family": "linkedin",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/nav/badges/route.ts",
+      "native_family": "navigation",
+      "native_implementation": [
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/build-queue/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/campaigns/[id]/leads/[leadId]/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/campaigns/[id]/leads/import/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/campaigns/[id]/leads/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/campaigns/[id]/merge-fields/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/campaigns/[id]/people/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/campaigns/[id]/preview/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/campaigns/[id]/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/campaigns/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/counts/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/drafts/[id]/approve/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/drafts/[id]/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/filter-options/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/leads/[id]/crm-context/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/leads/[id]/reply/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/leads/[id]/thread/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/messages/[id]/important/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/messages/[id]/opened/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/notes/[id]/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/notes/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/tasks/[id]/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/inbox/tasks/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/mailboxes/[id]/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/mailboxes/[id]/send-test/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/mailboxes/[id]/signature/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/mailboxes/[id]/working-hours/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/mailboxes/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/mailboxes/watch/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/tick/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/unsubscribe/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/outreach/webhooks/gmail-watch/route.ts",
+      "native_family": "email",
+      "native_implementation": [
+        "cloudflare/src/features/google.ts",
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/parent-pending/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/qualify/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/settings/channel-rules/[channel]/route.ts",
+      "native_family": "settings",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/crm.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/settings/integrations/[key]/route.ts",
+      "native_family": "settings",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/crm.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/settings/integrations/[key]/webhooks/route.ts",
+      "native_family": "settings",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/crm.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/setup/route.ts",
+      "native_family": "identity",
+      "native_implementation": [
+        "cloudflare/src/auth.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/targeted-domains/[domain]/parent/route.ts",
+      "native_family": "prospecting",
+      "native_implementation": [
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/features/completeness.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/webhooks/[id]/route.ts",
+      "native_family": "webhooks",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/inbound.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/webhooks/connection-accepted/route.ts",
+      "native_family": "webhooks",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/inbound.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/webhooks/message-received/route.ts",
+      "native_family": "webhooks",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/inbound.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/webhooks/unipile-account/route.ts",
+      "native_family": "webhooks",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/inbound.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/webhooks/unipile-message/route.ts",
+      "native_family": "webhooks",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/inbound.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/webhooks/whatsapp-message/route.ts",
+      "native_family": "webhooks",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/inbound.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/accounts/[id]/backfill/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/accounts/[id]/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/accounts/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/accounts/sync/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/campaigns/[id]/leads/[leadId]/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/campaigns/[id]/leads/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/campaigns/[id]/merge-fields/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/campaigns/[id]/preview/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/campaigns/[id]/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/campaigns/[id]/upload/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/campaigns/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/chats/[id]/read/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/chats/[id]/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/chats/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/people/[personId]/thread/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    },
+    {
+      "upstream_file": "src/app/api/whatsapp/send/route.ts",
+      "native_family": "whatsapp",
+      "native_implementation": [
+        "cloudflare/src/features/channels.ts",
+        "cloudflare/src/features/workflows.ts",
+        "cloudflare/src/jobs.ts",
+        "cloudflare/src/providers.ts"
+      ],
+      "scope": "capability equivalent; native API shape may differ"
+    }
+  ]
+}

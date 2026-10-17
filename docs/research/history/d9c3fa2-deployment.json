@@ -1,0 +1,21 @@
+{
+  "host": "https://sdr.genedai.me",
+  "source_repository": "https://github.com/Digidai/AgentSDR",
+  "source_branch": "cloudflare-native",
+  "deployed_code_sha": "d9c3fa27bf85f5367aa258ea3b79ba82422ca9ec",
+  "worker": "agentsdr-native",
+  "worker_version_id": "b20e2346-eb58-4052-b2ff-42fdcf10d8d4",
+  "checked_at": "2026-10-17T14:34:11.402Z",
+  "ci": {
+    "url": "https://github.com/Digidai/AgentSDR/actions/runs/39041143468",
+    "conclusion": "success"
+  },
+  "local_tests": 24,
+  "live_checks": 22,
+  "live_report": "live-verification.json",
+  "owner_initialized": false,
+  "real_provider_send_tested": false,
+  "browser_interaction_tested": false,
+  "synthetic_data_removed": true,
+  "secrets_in_repository": false
+}

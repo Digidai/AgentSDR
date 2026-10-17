@@ -1,84 +1,70 @@
-# AgentSDR — Cloudflare native edition
+# AgentSDR — Cloudflare native
 
-A Cloudflare-native fork of [Kandid-ai/AgentSDR](https://github.com/Kandid-ai/AgentSDR), preserving its MIT license and upstream history. The native application lives in this directory; the upstream Next.js/PostgreSQL application is retained outside it for reference and future ports.
+Production: **https://sdr.genedai.me** · GitHub fork: [Digidai/AgentSDR](https://github.com/Digidai/AgentSDR/tree/cloudflare-native).
 
-Production: **https://sdr.genedai.me**
+This branch migrates the implemented AgentSDR v0.3.1 feature families to **Workers, D1, private R2, Queues, Cron and Workers AI**. No PostgreSQL, server process, container or external application database is required. Upstream MIT source/history remains in the repository; the running application is entirely in this directory.
 
-## Architecture
+## Capabilities
 
-| Purpose                                                 | Cloudflare service              |
-| ------------------------------------------------------- | ------------------------------- |
-| API and React app                                       | Workers + Static Assets         |
-| People, campaigns, conversations, credentials, sessions | D1                              |
-| Private files and uploaded recordings                   | R2                              |
-| AI, enrichment, transcription, dispatch                 | Queues with a dead-letter queue |
-| Due sequences and interrupted-task recovery             | Cron, every five minutes        |
-| Default AI                                              | Workers AI, Llama 3.3 70B       |
+- People/companies, typed custom fields, conversion previews, CSV/XLSX import and merge, exports, notes, assigned tasks, DNC and private attachments.
+- All **15 upstream enrichment providers and 84 implemented actions**, multiple encrypted connections, typed table columns and output mapping, conditions/dependencies, async polling, audit/status, retries, row editing, dedupe/split/duplicate/export, folders/workbooks, saved views/selection and table-to-campaign conversion.
+- QuickJS WASM formulas with lodash, Moment, FormulaJS and organization-scoped LOOKUP; formula preview/generation. HTTP methods, JSON bodies/response paths and encrypted secret references.
+- Workers AI by default; optional OpenRouter connections, BYOK management catalog, fixed provider/model selection, structured outputs/examples, web research, private generated images and configurable call transcription.
+- Google Workspace delegated Gmail sending, Unicode MIME, signatures, thread affinity, paginated history/full sync and authenticated Pub/Sub wakeups with periodic sync/watch renewal.
+- LinkedIn/WhatsApp account sync and hosted linking/reconnection, working hours, daily limits, pacing/bursts, WhatsApp warmup, account pools/affinity, LinkedIn acceptance gates, searches/pagination/import, chats/backfill/read state and authenticated/replayable webhook events.
+- Multichannel campaigns with merge fields, previews, pause/stop, enrollment controls and exports. Unified inbox, AI drafts, human approval, important/read marks and uncertain-send reconciliation.
+- Upstream CRM taxonomy and classification policy, confidence/customer/stage review, acknowledge/adopt/undo, immutable sequence versions, draft-based follow-ups, snooze/pause/stop, identity exceptions and operator instruction blocks.
+- Calling campaigns, contact import/edit/photo/outcomes and retry dates; Chrome WhatsApp recorder, hangup bridge, private R2 multipart recordings, playback/ranges and transcripts. Download the native recorder after login at `/downloads/call-recorder`.
+- Organizations, roles, teams, invitations, password recovery/verification and optional Google PKCE sign-in. No public signup.
+- Domain-catalog import/filtering, website research, Apollo measured qualification/targets, parent review, exports and Apollo search links. Upstream does **not** ship its domain dataset; load your own through the workspace.
+- Persisted D1 jobs, at-least-once-safe claims, delayed Queue continuations and Cron recovery. Provider-ambiguous sends are held for reconciliation.
 
-No external database, persistent container, or Redis is required. Outreach channels still require your own provider accounts.
+The redesigned native APIs are capability equivalents, not a drop-in replacement for the old Next.js URLs. The pinned source inventory and mapping are in [upstream-parity.md](../docs/research/upstream-parity.md).
 
-## Start using the workspace
+## First use and integrations
 
-1. Open the private setup link supplied with the deployment. Create your owner account (password at least 12 characters). The setup secret is single use at the application boundary; ordinary public visitors cannot claim the workspace.
-2. Add product facts, target customers, sending timezone and hours in **设置 → 工作台**. Add factual reference material in **知识库**.
-3. Add people manually, or preview and import a CSV/XLSX/XLS file. The first row contains column names: `name,email,company,title,phone,linkedin,website,notes`. Chinese equivalents are accepted. Import up to 1,000 rows at a time; duplicate email addresses are skipped. CSV export escapes formula injection.
-4. Generate an AI draft from a lead's detail panel. Inbound replies can be recorded manually or received through an authenticated webhook. They stop active follow-ups for that lead. AI drafts wait for an explicit **审核并发送** action.
-5. Connect Resend or Unipile in **渠道连接** before starting outbound. Create a campaign, write sequence steps, enroll leads and click **启动活动**. This starts the sequence inside configured sending hours and caps. Nothing is automatically enrolled or started by deployment.
+Open the private `/#setup=...` link supplied with deployment, create the owner, then configure providers in **渠道账号**, **团队与数据服务**, and **工作台设置**. Keep the bootstrap token private. An already initialized installation uses its existing accounts.
 
-## Integrations
+- Gmail: enable Gmail API and domain-wide delegation for the service account, authorize `gmail.modify` and `gmail.send`, then provide the service-account email/private key and a delegated test mailbox. A Pub/Sub topic is optional; polling works without it. The authenticated push URL is available from `/api/mailbox-webhook`.
+- LinkedIn/WhatsApp: add the organization's Unipile API key/endpoint, sync accounts, set limits/hours and register notifications. Native webhook URLs require the organization's secret header. Repeated provider events are deduplicated.
+- OpenRouter: Workers AI works without OpenRouter. For strict BYOK, add inference/management keys, discover prioritized provider credentials/models and select enabled routes. Confirm the provider-side shared-capacity setting before enabling strict BYOK. Fallback-section credentials are excluded from selectable routes.
+- Calling: use Chrome 116+, unzip the authenticated recorder download, load it from `chrome://extensions` in developer mode and log in to WhatsApp Web. Grant the recorder's requested permissions. A real call and microphone recording require human verification.
+- Authentication email and invitation delivery need a configured Resend sender. Google sign-in needs OAuth client credentials; callback is `https://sdr.genedai.me/api/auth/callback/google`.
 
-- **Resend**: API key with domain-read access for connection validation, plus a verified sender address. This edition sends via Resend HTTP API. Provider acceptance is recorded as `sent`; delivery and open tracking are not implemented.
-- **Unipile**: HTTPS API hostname (`*.unipile.com`), API key, LinkedIn / WhatsApp account IDs. Connect the underlying accounts through Unipile. LinkedIn profile URLs resolve to provider IDs; WhatsApp numbers require an international prefix. Provider APIs are implemented but real account dispatch must be verified after credentials are connected.
-- **Workers AI**: built in; no external model key needed. Organization-specific OpenRouter is optional and overrides the default model.
-- **Hunter / Apollo**: optional enrichment providers. Tables also support AI-generated columns and read-only HTTPS JSON API columns. Templates accept `{{name}}`, `{{first_name}}`, `{{company}}` and other row keys.
-- **Incoming replies**: create a webhook secret of at least 24 characters. Configure the organization's channel-specific URL from Settings and `X-Webhook-Secret` header. A normalized inbound event contains `external_id`, `email` or `phone` (or `person_id`), `body`, and optional `subject`. Unipile message events with `message_id`, `message`, `sender.attendee_provider_id` are also parsed. Duplicate events are ignored. Mailbox OAuth/synchronization and Resend signed delivery webhooks are not implemented; use a mailbox webhook transformer or log a reply manually.
-- **Recordings**: private audio-file upload and queued transcription are supported. Browser dialing/recording and the upstream Chrome recorder extension are not ported to this API.
+Keys are encrypted with AES-GCM and excluded from API reads. Preserve the Worker encryption secret with your D1 backup. Provider subscriptions and credentials are external dependencies; fixture tests do not establish real delivery or account permissions.
 
-Stored integration credentials are encrypted with AES-256-GCM. API responses expose only connection names and timestamps. The encryption key must be backed up with the database and never changed casually.
-
-## Local development
+## Develop, verify, deploy
 
 ```sh
 cd cloudflare
 npm ci
 cp .dev.vars.example .dev.vars
 npm run db:local
-npm run build
+npm run check
+npm run check:runtime
+npm audit
 npm run dev
 ```
 
-For UI editing, run `npm run web:dev` in another terminal; it proxies API traffic to Wrangler on port 8787. Local AI requires an actual Workers AI binding or a remote deployment; test inference is mocked. Generate independent secrets; do not use production keys locally.
+`check` runs TypeScript, local D1/R2 API/task tests and the frontend/recorder build. `check:runtime` bundles the actual Worker and runs auth, database and static-WASM checks in workerd. Tests cover all 84 handler registrations, all 15 unauthorized credential paths and selected full provider fixtures; they do not call all providers live. `vendor:refresh` regenerates formula distributions/static WASM and license copies from the lockfile dependencies.
 
-## Validation and deployment
+For production, authenticate with `wrangler whoami`, back up D1, apply additive migrations, then deploy an exact pushed commit:
 
 ```sh
-npm run check
-npm audit
-npx wrangler deploy --dry-run
-npx wrangler whoami
 npm run db:remote
-npx wrangler secret bulk .secrets.production.json
-npm run deploy
+npx wrangler deploy --var RELEASE:<git-sha>
 ```
 
-Secret JSON contains `ENCRYPTION_KEY`, `UNSUBSCRIBE_SECRET`, and `BOOTSTRAP_TOKEN`. Keep it outside version control with filesystem mode 0600. The account, database, R2 bucket, queues and custom hostname are declared in `wrangler.jsonc`. Adapt these when using a different Cloudflare account. Never apply this fork's migrations to the upstream PostgreSQL database or another product's D1 database.
+`wrangler.jsonc` is the source of truth for the deployment account, D1/R2/Queues, AI and custom domain. Production secrets remain in Worker secrets and ignored local backups; never commit them. See [delivery status](../docs/research/delivery-status.md) and `deployment.json` for the actually deployed version and verification evidence.
 
-The installed version and asset/inference proof are recorded in `docs/research/deployment.json` and `live-verification.json`. The operator-only `node scripts/live-check.mjs --release=<deployed-sha>` performs a fresh-install smoke test only when no owner exists, then removes its own synthetic workspace. It requires local Cloudflare credentials and ignored deployment secrets; do not run it after initializing a real workspace.
+The operator-only `scripts/live-check.mjs` refuses to bootstrap an initialized installation. On a fresh installation it verifies a synthetic organization, then deletes only its own test data and restores private owner setup. Do not use it on an existing owner account.
 
-`npm run check` runs TypeScript, unit/API/task tests against real local D1/R2 emulation, and the production frontend build. Tests cover tenant/role boundaries, setup races, session revocation, webhook deduplication, follow-up stops, send idempotency, uncertain delivery, encryption, opt-out, enrichment and private files. See [delivery status](../docs/research/delivery-status.md) for actual release evidence and remaining verification.
+## Operational limits and validation boundaries
 
-## Operational behavior
+Each API request imports up to 1,000 people or 500 table rows; larger files can be chunked. Tables display/run up to 1,000 rows per request, with up to 150 columns; LOOKUP has a 50,000-row source cap. Formula execution has a time/memory budget and no host/network bindings. Calls upload up to 200 MiB in 8 MiB parts; provider audio/model limits still apply. Whisper handles small recordings; larger recordings need a configured audio model.
 
-- Pending jobs are persisted before queue publication; Cron recovers publication interruptions and stale tasks.
-- A database claim admits one consumer per job. Resend receives a deterministic idempotency key. Timeout or ambiguous provider acceptance is held as `uncertain`; no automatic send retry is allowed for that state.
-- Outbound is checked again for DNC, active enrollment, campaign state, sending hours and daily caps immediately before dispatch.
-- Limits reserve per organization/channel and campaign/day in the workspace's timezone. Five-minute Cron means a due step may run several minutes after its nominal timestamp.
-- GET unsubscribe links show a confirmation; POST applies the signed opt-out and records suppression. DNC persists independently of campaign membership.
-- Analytics count actual stored messages and current lead stages. Manually logged replies are included. This edition does not infer meeting attendance, delivery, revenue, or customer outcomes from a send receipt.
-- Invite links target a specific email, expire in seven days, and do not send an invitation email automatically. Password change revokes other sessions. No public signup, Google OAuth, or email password reset is enabled.
+Campaign sends require activation and configured channels; CRM follow-ups create reviewable drafts. Reply/DNC checks happen before dispatch, but cannot recall a request already accepted by a provider. Send receipts mean provider acceptance, not inbox delivery. Analytics label message counts separately from people or meeting requests.
 
-## Porting scope
+UI/browser automation is deliberately excluded by this repository's `AGENTS.md`. Manual acceptance should cover owner setup, desktop/mobile navigation, column/forms, a controlled owned-recipient email, and a real recorder call after provider configuration. No claim of real provider delivery, actual calls or microphone capture follows from the automated tests.
 
-This is a working native SDR application, **not complete feature parity** with upstream v0.3.1. The native edition adds the workflow above while retaining upstream code as reference. It currently lacks Google Workspace sending/sync, the full 15-provider registry, formula/QuickJS columns, advanced mailbox pools/warm-up, account-specific platform limits, automated connection-acceptance gates, native phone calling/recording and the upstream Chrome recorder integration. Do not use a UI label or a source file retained in the fork as evidence that an upstream feature is deployed.
-
-Copyright and license notices remain in [LICENSE](../LICENSE).
+MIT license: [LICENSE](../LICENSE). Ported upstream and third-party notices: [ported/README.md](src/ported/README.md).

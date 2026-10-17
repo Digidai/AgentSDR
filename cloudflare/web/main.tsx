@@ -53,6 +53,18 @@ import {
   Badge,
 } from "./lib";
 import "./style.css";
+import {
+  Channels,
+  Discovery,
+  CrmWorkspace,
+  Calling,
+  Workspace,
+  LeadExtras,
+  Recovery,
+  CampaignExtras,
+  ExtendedAnalytics,
+} from "./extended";
+import { AdvancedTable } from "./table-workspace";
 type Action = (work: () => Promise<any>, success?: string) => Promise<boolean>;
 function Icon({ name, size = 18 }: { name: string; size?: number }) {
   const C: Record<string, any> = {
@@ -211,6 +223,7 @@ function Auth({ status, onDone }: { status: Row; onDone: () => void }) {
   const setup = !status.initialized && !invite;
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const { data: options } = useData("/auth/options");
   useEffect(() => {
     if (setupToken || invite) history.replaceState({}, "", location.pathname);
   }, []);
@@ -352,6 +365,18 @@ function Auth({ status, onDone }: { status: Row; onDone: () => void }) {
                 <ArrowRight size={17} />
               </button>
             </form>
+          )}
+          {!setup && !invite && (
+            <div className="toolbar">
+              <a className="text-button" href="/forgot-password">
+                忘记密码
+              </a>
+              {options?.google && (
+                <a className="button" href="/api/auth/google">
+                  使用 Google 登录
+                </a>
+              )}
+            </div>
           )}
           <div className="auth-note">
             <ShieldCheck size={14} /> 仅受邀成员可访问 · 数据属于你的工作台
@@ -783,6 +808,34 @@ function LeadDetail({
                   {m.subject && <strong>{m.subject}</strong>}
                   <p>{m.body}</p>
                   <div className="inline">
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        void act(
+                          () =>
+                            api(`/messages/${m.id}`, "PATCH", {
+                              read: !m.read_at,
+                            }),
+                          "已更新",
+                        ).then(reload)
+                      }
+                    >
+                      {m.read_at ? "标为未读" : "标为已读"}
+                    </button>
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        void act(
+                          () =>
+                            api(`/messages/${m.id}`, "PATCH", {
+                              important: !m.important,
+                            }),
+                          "已更新",
+                        ).then(reload)
+                      }
+                    >
+                      {m.important ? "取消重要标记" : "标为重要"}
+                    </button>
                     <Badge value={m.status} />
                     {m.classification && <Badge value={m.classification} />}
                   </div>
@@ -893,6 +946,7 @@ function LeadDetail({
           ))}
         </>
       )}
+      <LeadExtras pid={pid} refresh={refresh} reload={reload} act={act} />
     </Modal>
   );
 }
@@ -912,6 +966,7 @@ function Leads({
     [page, setPage] = useState(1),
     [creating, setCreating] = useState(false),
     [importing, setImporting] = useState(false),
+    [mergeImport, setMergeImport] = useState(false),
     [rows, setRows] = useState<Row[]>([]),
     [fileError, setFileError] = useState(""),
     [tab, setTab] = useState("people");
@@ -1208,6 +1263,14 @@ function Leads({
                   </tbody>
                 </table>
               </div>
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  checked={mergeImport}
+                  onChange={(e) => setMergeImport(e.target.checked)}
+                />
+                更新已存在的邮箱或 LinkedIn 联系人，保留勿扰标记
+              </label>
               <div className="form-actions">
                 <span className="muted">
                   共 {rows.length} 行，以上为前 6 行预览
@@ -1216,7 +1279,10 @@ function Leads({
                   className="button primary"
                   onClick={() =>
                     void act(async () => {
-                      const r = await api("/people/import", "POST", { rows });
+                      const r = await api("/people/import", "POST", {
+                        rows,
+                        mode: mergeImport ? "merge" : "skip",
+                      });
                       setImporting(false);
                       setRows([]);
                       reload();
@@ -1246,10 +1312,18 @@ function CampaignEditor({ act, onDone }: { act: Action; onDone: () => void }) {
       onSubmit={(e) => {
         e.preventDefault();
         const b = Object.fromEntries(new FormData(e.currentTarget));
-        void act(
-          () => api("/campaigns", "POST", { ...b, channel, steps }),
-          "活动草稿已创建",
-        ).then((ok) => {
+        void act(async () => {
+          const created = await api("/campaigns", "POST", {
+            ...b,
+            channel,
+            steps,
+          });
+          if (b.provider === "gmail")
+            await api(`/campaigns/${created.id}`, "PATCH", {
+              provider: "gmail",
+            });
+          return created;
+        }, "活动草稿已创建").then((ok) => {
           if (ok) onDone();
         });
       }}
@@ -1277,6 +1351,14 @@ function CampaignEditor({ act, onDone }: { act: Action; onDone: () => void }) {
             ))}
           </select>
         </Field>
+        {channel === "email" && (
+          <Field label="邮件服务">
+            <select name="provider">
+              <option value="resend">Resend</option>
+              <option value="gmail">Google Workspace Gmail</option>
+            </select>
+          </Field>
+        )}
         {channel === "email" ? (
           <Field label="发件地址（留空使用设置中的地址）">
             <input
@@ -1575,6 +1657,7 @@ function CampaignDetail({
           删除活动
         </button>
       </div>
+      <CampaignExtras cid={cid} refresh={refresh} reload={reload} act={act} />
     </Modal>
   );
 }
@@ -1859,6 +1942,34 @@ function InboxPage({
                   <p>{m.body}</p>
                   <div className="inline">
                     <Icon name={m.channel} size={13} />
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        void act(
+                          () =>
+                            api(`/messages/${m.id}`, "PATCH", {
+                              read: !m.read_at,
+                            }),
+                          "已更新",
+                        ).then(reload)
+                      }
+                    >
+                      {m.read_at ? "标为未读" : "标为已读"}
+                    </button>
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        void act(
+                          () =>
+                            api(`/messages/${m.id}`, "PATCH", {
+                              important: !m.important,
+                            }),
+                          "已更新",
+                        ).then(reload)
+                      }
+                    >
+                      {m.important ? "取消重要标记" : "标为重要"}
+                    </button>
                     <Badge value={m.status} />
                     {m.classification && <Badge value={m.classification} />}
                   </div>
@@ -2068,239 +2179,7 @@ function Analytics({ refresh }: { refresh: number }) {
     </>
   );
 }
-function TableDetail({
-  tid,
-  onClose,
-  act,
-  refresh,
-  reload,
-}: {
-  tid: string;
-  onClose: () => void;
-  act: Action;
-  refresh: number;
-  reload: () => void;
-}) {
-  const { data: t, error } = useData(`/tables/${tid}`, refresh);
-  const [adding, setAdding] = useState(false),
-    [column, setColumn] = useState(false);
-  if (!t)
-    return (
-      <Modal title="数据表" onClose={onClose}>
-        <Loading error={error} />
-      </Modal>
-    );
-  return (
-    <Modal title={t.name} onClose={onClose} wide>
-      <div className="toolbar">
-        <button className="button" onClick={() => setAdding(!adding)}>
-          <Plus size={16} />
-          添加行
-        </button>
-        <button className="button" onClick={() => setColumn(!column)}>
-          <Sparkles size={16} />
-          添加数据列
-        </button>
-        <button
-          className="button"
-          onClick={() =>
-            csvDownload(
-              t.rows.map((r: Row) => r.cells),
-              `${t.name}.csv`,
-            )
-          }
-        >
-          <ArrowDownToLine size={16} />
-          导出
-        </button>
-        <span className="spacer" />
-        <button
-          className="button primary"
-          onClick={() =>
-            void act(
-              () => api(`/tables/${tid}/run`, "POST", {}),
-              "数据补全已排队，稍后刷新查看结果",
-            ).then(reload)
-          }
-        >
-          <Play size={16} />
-          运行补全
-        </button>
-      </div>
-      {adding && (
-        <form
-          className="compose-box"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const row = Object.fromEntries(new FormData(e.currentTarget));
-            void act(
-              () => api(`/tables/${tid}/rows`, "POST", { rows: [row] }),
-              "数据行已添加",
-            ).then((ok) => {
-              if (ok) {
-                setAdding(false);
-                reload();
-              }
-            });
-          }}
-        >
-          <div className="form-grid">
-            {t.columns
-              .filter((c: Row) => c.type === "text")
-              .map((c: Row) => (
-                <Field key={c.key} label={c.name}>
-                  <input name={c.key} />
-                </Field>
-              ))}
-          </div>
-          <button className="button primary">添加数据行</button>
-          <label className="button file-button">
-            <Upload size={15} />
-            导入 CSV / Excel
-            <input
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              hidden
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                if (f)
-                  await act(async () => {
-                    const rows = await readRows(f);
-                    await api(`/tables/${tid}/rows`, "POST", { rows });
-                    reload();
-                  }, "数据已导入");
-              }}
-            />
-          </label>
-        </form>
-      )}
-      {column && (
-        <form
-          className="compose-box"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const b = Object.fromEntries(new FormData(e.currentTarget));
-            void act(
-              () =>
-                api(`/tables/${tid}`, "PATCH", { columns: [...t.columns, b] }),
-              "列已添加",
-            ).then((ok) => {
-              if (ok) {
-                setColumn(false);
-                reload();
-              }
-            });
-          }}
-        >
-          <div className="form-grid">
-            <Field label="列名称">
-              <input name="name" required placeholder="个性化开场白" />
-            </Field>
-            <Field label="列标识（英文，不重复）">
-              <input
-                name="key"
-                required
-                pattern="[a-zA-Z][a-zA-Z0-9_]{0,49}"
-                placeholder="opening_line"
-              />
-            </Field>
-            <Field label="列类型">
-              <select name="type">
-                <option value="ai">AI 生成</option>
-                <option value="http">HTTP API 数据</option>
-                <option value="hunter">Hunter 邮箱查找</option>
-                <option value="apollo">Apollo 资料补全</option>
-                <option value="text">文本</option>
-              </select>
-            </Field>
-            <Field label="HTTP 地址（仅 HTTP 类型）">
-              <input
-                name="url"
-                placeholder="https://api.example.com/?name={{name}}"
-              />
-            </Field>
-            <Field label="JSON 路径（可选）">
-              <input name="path" placeholder="data.email" />
-            </Field>
-          </div>
-          <Field label="AI 指令（仅 AI 类型）">
-            <textarea
-              name="prompt"
-              rows={3}
-              placeholder="为 {{name}} 写一句自然的开场白。只使用已提供的信息，不编造事实。"
-            />
-          </Field>
-          <button className="button primary">添加列</button>
-        </form>
-      )}
-      {t.rows.length ? (
-        <div className="table-scroll enrichment-table">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                {t.columns.map((c: Row) => (
-                  <th key={c.key}>
-                    {c.type !== "text" && <Sparkles size={13} />} {c.name}
-                  </th>
-                ))}
-                <th>状态</th>
-              </tr>
-            </thead>
-            <tbody>
-              {t.rows.map((r: Row, i: number) => (
-                <tr key={r.id}>
-                  <td>{i + 1}</td>
-                  {t.columns.map((c: Row) => (
-                    <td
-                      key={c.key}
-                      title={
-                        typeof r.cells[c.key] === "object"
-                          ? JSON.stringify(r.cells[c.key])
-                          : String(r.cells[c.key] || "")
-                      }
-                    >
-                      {typeof r.cells[c.key] === "object"
-                        ? JSON.stringify(r.cells[c.key])
-                        : String(r.cells[c.key] || "—")}
-                    </td>
-                  ))}
-                  <td>
-                    <Badge value={r.status} />
-                    {r.error && <small className="danger">{r.error}</small>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <Empty
-          icon="tables"
-          title="先填入你想了解的人"
-          body="添加数据行，再添加 AI、Hunter、Apollo 或 HTTP 数据列。"
-        />
-      )}
-      <div className="form-actions">
-        <span className="muted">
-          显示最多 1,000 行；每次运行最多处理 100 个待补全行。
-        </span>
-        <button
-          className="button"
-          onClick={() =>
-            void act(
-              () => api(`/tables/${tid}/promote`, "POST", {}),
-              "已同步到联系人，重复邮箱自动跳过",
-            ).then(reload)
-          }
-        >
-          <Users size={16} />
-          同步为联系人
-        </button>
-      </div>
-    </Modal>
-  );
-}
+const TableDetail = AdvancedTable;
 function Tables({
   refresh,
   reload,
@@ -3059,6 +2938,11 @@ const nav = [
   ["inbox", "统一收件箱"],
   ["pipeline", "销售漏斗"],
   ["analytics", "数据分析"],
+  ["channels", "渠道账号"],
+  ["discovery", "发现线索"],
+  ["crm", "客户跟进"],
+  ["calling", "通话工作台"],
+  ["workspace", "团队与数据服务"],
 ];
 function App() {
   const [status, setStatus] = useState<Row | null>(null),
@@ -3113,6 +2997,8 @@ function App() {
         <Loading error={authError} />
       </div>
     );
+  if (["/forgot-password", "/reset-password"].includes(location.pathname))
+    return <Recovery onDone={() => void loadAuth()} />;
   if (!status.user)
     return <Auth status={status} onDone={() => void loadAuth()} />;
   const shared = { refresh, reload, act, select: setPerson };
@@ -3135,7 +3021,7 @@ function App() {
         <button className="workspace-switch" onClick={() => go("settings")}>
           <span className="workspace-avatar">G</span>
           <div>
-            <strong>Gene's workspace</strong>
+            <strong>{status.user.org_name || "我的工作台"}</strong>
             <small>你的销售工作台</small>
           </div>
           <ChevronDown size={15} />
@@ -3235,7 +3121,17 @@ function App() {
           </div>
         </header>
         <main className="page-content">
-          {path === "overview" ? (
+          {path === "channels" ? (
+            <Channels {...shared} />
+          ) : path === "discovery" ? (
+            <Discovery {...shared} />
+          ) : path === "crm" ? (
+            <CrmWorkspace {...shared} />
+          ) : path === "calling" ? (
+            <Calling {...shared} />
+          ) : path === "workspace" ? (
+            <Workspace {...shared} />
+          ) : path === "overview" ? (
             <Overview refresh={refresh} go={go} />
           ) : path === "leads" ? (
             <Leads {...shared} />
@@ -3246,7 +3142,10 @@ function App() {
           ) : path === "pipeline" ? (
             <Pipeline {...shared} />
           ) : path === "analytics" ? (
-            <Analytics refresh={refresh} />
+            <>
+              <Analytics refresh={refresh} />
+              <ExtendedAnalytics {...shared} />
+            </>
           ) : path === "tables" ? (
             <Tables {...shared} />
           ) : (
@@ -3254,7 +3153,7 @@ function App() {
           )}
           <footer className="page-footer">
             <span>
-              AgentSDR <span>·</span> Gene's workspace
+              AgentSDR <span>·</span> {status.user.org_name || "我的工作台"}
             </span>
             <span>每一步向前，都有价值。</span>
           </footer>

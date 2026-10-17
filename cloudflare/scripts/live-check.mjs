@@ -195,6 +195,80 @@ try {
     "D1 enrichment table persistence",
     (await api(`/tables/${table.id}`)).rows.length === 1,
   );
+  const catalog = await api("/provider-catalog");
+  check(
+    "15 providers and 84 implemented native action handlers",
+    catalog.items.length === 15 &&
+      catalog.items.flatMap((p) => p.actions.filter((a) => a.implemented))
+        .length === 84,
+  );
+  check(
+    "Upstream CRM taxonomy persisted in D1",
+    (await api("/crm/categories")).items.flatMap((c) => c.subcategories)
+      .length > 10,
+  );
+  await api(`/tables/${table.id}`, "PATCH", {
+    columns: [
+      { key: "name", name: "Name", type: "text" },
+      {
+        key: "result",
+        name: "Result",
+        type: "formula",
+        config: { expression: '_.startCase({{name}}) + ":" + SUM([2,3])' },
+      },
+    ],
+  });
+  const preview = await api(`/tables/${table.id}/formula-preview`, "POST", {
+    expression: '_.startCase({{name}}) + ":" + SUM([2,3])',
+    row: { name: "runtime_check" },
+  });
+  check(
+    "Production static QuickJS WASM with lodash and FormulaJS",
+    preview.ok && preview.value === "Runtime Check:5",
+  );
+  await api(`/tables/${table.id}/run`, "POST", {});
+  for (let i = 0; i < 18; i++) {
+    const row = (await api(`/tables/${table.id}`)).rows[0];
+    if (row.status === "done") break;
+    if (row.status === "failed") throw new Error("Formula task: " + row.error);
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  check(
+    "Real Queue formula execution persists cell audit",
+    (await api(`/tables/${table.id}`)).rows[0].cell_meta.result?.status ===
+      "success",
+  );
+  const sequence = await api("/crm/sequences", "POST", {
+    name: "Synthetic review-only sequence",
+    steps: [{ channel: "email", body: "Never sent", delay_minutes: 0 }],
+  });
+  check(
+    "Immutable CRM sequence publication",
+    (await api(`/crm/sequences/${sequence.id}/publish`, "POST", {})).version ===
+      1,
+  );
+  const team = await api("/teams", "POST", { name: "Synthetic team" });
+  check(
+    "Scoped teams on production D1",
+    (await api("/teams")).items.some((t) => t.id === team.id),
+  );
+  await api(`/people/${person.id}`, "PATCH", { phone: "+12025550110" });
+  const call = await api("/calls", "POST", { personId: person.id });
+  const recorder = await fetch(
+    base + `/api/call-recorder/calls/${call.call.id}`,
+    { headers: { Authorization: "Bearer " + call.recorderToken } },
+  );
+  check("Scoped recorder bearer works without a browser call", recorder.ok);
+  const rejected = await fetch(
+    base + `/api/call-recorder/calls/${call.call.id}`,
+    { headers: { Authorization: "Bearer invalid" } },
+  );
+  check("Recorder rejects a forged bearer", rejected.status === 403);
+  await api(`/calls/${call.call.id}/cancel`, "POST", {});
+  check(
+    "Recorder download is authenticated",
+    (await request("/recorder.zip", "GET", undefined, false)).status === 401,
+  );
   const form = new FormData();
   form.set("person_id", person.id);
   form.set(
@@ -239,7 +313,7 @@ try {
   }
   for (const f of await files("dist")) {
     const relative = f.slice(5);
-    const remote = await fetch(base + "/" + relative);
+    const remote = await request("/" + relative);
     let bytes = Buffer.from(await remote.arrayBuffer());
     if (relative === "index.html") {
       // Cloudflare's zone-level JavaScript Detection injects one dynamic

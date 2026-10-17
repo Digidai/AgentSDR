@@ -1,3 +1,9 @@
+import { strictAiRuntime } from "./features/ai";
+import {
+  openRouterTokenLimit,
+  strictProviderRouting,
+} from "./ported/openrouter-types";
+import { sendGmail } from "./features/google";
 import type { Env, Row } from "./types";
 import {
   decrypt,
@@ -13,6 +19,7 @@ export class ProviderError extends Error {
   constructor(
     message: string,
     public uncertain = false,
+    public status = 0,
   ) {
     super(message);
   }
@@ -52,6 +59,7 @@ export async function requestJson(
     throw new ProviderError(
       `Provider returned HTTP ${response.status}. Check the integration and provider dashboard.`,
       mutates && response.status >= 500,
+      response.status,
     );
   return result;
 }
@@ -93,13 +101,65 @@ export async function generate(
   org: string,
   system: string,
   prompt: string,
+  options: Row = {},
 ) {
   const messages = [
     { role: "system", content: system },
     { role: "user", content: prompt },
   ];
-  const config = await integration(env, org, "openrouter");
+  if (Array.isArray(options.examples))
+    messages.splice(
+      1,
+      0,
+      ...options.examples.slice(0, 10).flatMap((e: Row) => [
+        { role: "user", content: String(e.input || "").slice(0, 10000) },
+        {
+          role: "assistant",
+          content: String(e.response || "").slice(0, 10000),
+        },
+      ]),
+    );
+  const stored = await env.DB.prepare(
+    "SELECT value FROM preferences WHERE org_id=? AND key='ai'",
+  )
+    .bind(org)
+    .first<{ value: string }>();
+  const orgSettings = stored ? JSON.parse(stored.value) : {};
+  if (orgSettings.instructions)
+    messages[0].content +=
+      "\nWorkspace instructions (product facts and writing constraints):\n" +
+      String(orgSettings.instructions).slice(0, 10000);
+  let config = await integration(env, org, "openrouter");
+  if (options.connectionId) {
+    const connection = await env.DB.prepare(
+      "SELECT encrypted FROM provider_connections WHERE id=? AND org_id=? AND provider='openrouter' AND enabled=1",
+    )
+      .bind(options.connectionId, org)
+      .first<{ encrypted: string }>();
+    if (!connection) throw new Error("AI connection unavailable");
+    config = await decrypt<Row>(connection.encrypted, env.ENCRYPTION_KEY);
+  }
+  const strict = await strictAiRuntime(env, org, options);
+  if (strict) config = { api_key: strict.apiKey, model: strict.model };
   if (config) {
+    const settingsRow = await env.DB.prepare(
+      "SELECT value FROM preferences WHERE org_id=? AND key='ai'",
+    )
+      .bind(org)
+      .first<{ value: string }>();
+    const settings = settingsRow ? JSON.parse(settingsRow.value) : {};
+    const selected =
+      strict?.model ||
+      options.model ||
+      settings.defaultModel ||
+      config.model ||
+      "openai/gpt-4.1-mini";
+    if (
+      !strict &&
+      settings.allowedModels?.length &&
+      !settings.allowedModels.includes(selected)
+    )
+      throw new Error("Selected AI model is not enabled");
     const result = await requestJson(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -111,15 +171,67 @@ export async function generate(
           "X-Title": "Gene AgentSDR",
         },
         body: JSON.stringify({
-          model: config.model || "openai/gpt-4.1-mini",
+          model: selected,
+          provider: strict
+            ? strictProviderRouting(strict.provider)
+            : {
+                only: settings.provider ? [settings.provider] : undefined,
+                order: settings.provider ? [settings.provider] : undefined,
+                allow_fallbacks: false,
+                require_parameters: true,
+              },
           messages,
-          max_tokens: 1200,
+          ...openRouterTokenLimit(
+            selected,
+            Math.min(16000, Number(options.maxTokens) || 1200),
+          ),
+          ...(options.schema
+            ? {
+                tools: [
+                  {
+                    type: "function",
+                    function: {
+                      name: "fill_row",
+                      description: "Return the completed row",
+                      parameters: options.schema,
+                      strict: true,
+                    },
+                  },
+                ],
+                tool_choice: {
+                  type: "function",
+                  function: { name: "fill_row" },
+                },
+                parallel_tool_calls: false,
+              }
+            : {}),
+          ...(options.useCase === "web-research"
+            ? {
+                plugins: [
+                  {
+                    id: "web",
+                    ...(selected.startsWith("google/")
+                      ? { engine: "exa" }
+                      : {}),
+                  },
+                ],
+              }
+            : {}),
           temperature: 0.3,
         }),
       },
     );
-    return String(result.choices?.[0]?.message?.content || "");
+    const message = result.choices?.[0]?.message;
+    return String(
+      (options.schema
+        ? message?.tool_calls?.[0]?.function?.arguments
+        : undefined) ||
+        message?.content ||
+        "",
+    );
   }
+  if (options.useCase === "web-research")
+    throw new Error("Choose an OpenRouter research model and provider first");
   const result = await (env.AI as any).run(env.AI_MODEL, {
     messages,
     max_tokens: 1200,
@@ -140,6 +252,19 @@ export async function deliver(
   if (campaign.channel === "email") {
     if (!person.email)
       throw new ProviderError("This lead has no email address");
+    if (campaign.provider === "gmail") {
+      if (!campaign._account)
+        throw new ProviderError("Choose a connected Google mailbox");
+      return sendGmail(
+        env,
+        org,
+        person,
+        campaign._account,
+        subject,
+        body,
+        jobId,
+      );
+    }
     const config = await integration(env, org, "resend");
     if (!config)
       throw new ProviderError("Connect an email provider in Settings first");
@@ -199,10 +324,39 @@ export async function deliver(
       : raw;
     if (!identifier)
       throw new ProviderError("Use a valid LinkedIn profile URL");
-    const profile = await requestJson(
-      `${base}/api/v1/users/${encodeURIComponent(identifier)}?account_id=${encodeURIComponent(account)}`,
-      { headers },
-    );
+    const cachedTarget = JSON.parse(person.custom || "{}").linkedin_provider_id;
+    if (!cachedTarget && campaign._account) {
+      const { rules, PacingWait } = await import("./features/channels");
+      const r = await rules(env, org, "linkedin"),
+        slot = Math.floor(Date.now() / (Number(r.runGapMinutes[0]) * 60000)),
+        key = `lookup:${campaign._account.id}:${slot}`;
+      await env.DB.prepare(
+        "INSERT OR IGNORE INTO daily_usage(org_id,day,channel,count) VALUES(?,?,?,0)",
+      )
+        .bind(org, new Date().toISOString().slice(0, 10), key)
+        .run();
+      const ok = await env.DB.prepare(
+        "UPDATE daily_usage SET count=count+1 WHERE org_id=? AND day=? AND channel=? AND count<? RETURNING count",
+      )
+        .bind(
+          org,
+          new Date().toISOString().slice(0, 10),
+          key,
+          r.profileLookupsPerRun[0],
+        )
+        .first();
+      if (!ok)
+        throw new PacingWait(
+          "LinkedIn profile lookups are resting",
+          r.runGapMinutes[0] * 60,
+        );
+    }
+    const profile = cachedTarget
+      ? { provider_id: cachedTarget }
+      : await requestJson(
+          `${base}/api/v1/users/${encodeURIComponent(identifier)}?account_id=${encodeURIComponent(account)}`,
+          { headers },
+        );
     target = String(profile.provider_id || "");
     if (!target)
       throw new ProviderError("LinkedIn profile could not be resolved");
@@ -232,11 +386,18 @@ export async function deliver(
   } else {
     const form = new FormData();
     form.set("account_id", account);
-    form.set("attendees_ids", target);
+    const previous = campaign._account
+      ? await env.DB.prepare(
+          "SELECT thread_id FROM messages WHERE org_id=? AND person_id=? AND account_id=? AND thread_id IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+        )
+          .bind(org, person.id, campaign._account.id)
+          .first<{ thread_id: string }>()
+      : null;
+    if (!previous?.thread_id) form.set("attendees_ids", target);
     form.set("text", body);
     if (campaign.channel === "linkedin") form.set("linkedin[api]", "classic");
     result = await requestJson(
-      `${base}/api/v1/chats`,
+      `${base}/api/v1/chats${previous?.thread_id ? "/" + encodeURIComponent(previous.thread_id) + "/messages" : ""}`,
       { method: "POST", headers, body: form },
       true,
     );
@@ -247,7 +408,12 @@ export async function deliver(
       "Provider returned no message ID; inspect provider history.",
       true,
     );
-  return { externalId: String(externalId), body, subject };
+  return {
+    externalId: String(externalId),
+    body,
+    subject,
+    threadId: result.chat_id || null,
+  };
 }
 
 export async function enrich(

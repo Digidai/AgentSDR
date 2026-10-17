@@ -474,6 +474,8 @@ export type UploadUrlResponse = {
   recordingKey: string;
   /** Headers the PUT must send exactly, or the signature fails. */
   headers: Record<string, string>;
+  /** Cloudflare-native R2 upload protocol; absent on legacy deployments. */
+  multipart?: { partSize: number; completeUrl: string };
 };
 
 /**

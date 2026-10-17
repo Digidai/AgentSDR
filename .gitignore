@@ -97,3 +97,5 @@ service-account*.json
 /cloudflare/.dev.vars
 /cloudflare/.secrets*.json
 /cloudflare/.bootstrap*
+
+/cloudflare/web/public/recorder.zip

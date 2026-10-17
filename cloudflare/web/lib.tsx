@@ -31,14 +31,25 @@ export function useData(path: string, refresh = 0) {
   useEffect(() => {
     let active = true;
     setError("");
-    api(path)
-      .then((r) => {
-        if (active) setData(r);
-      })
-      .catch((e) => {
-        if (active) setError(e.message);
-      });
+    const pull = () =>
+      api(path)
+        .then((r) => {
+          if (active) setData(r);
+        })
+        .catch((e) => {
+          if (active) setError(e.message);
+        });
+    void pull();
+    const timer =
+      /^\/(?:tables\/|calling\/|calls|crm\/(?:actions|classifications)|jobs|inbox|search\/batches|prospecting)/.test(
+        path,
+      )
+        ? setInterval(() => {
+            if (document.visibilityState === "visible") void pull();
+          }, 10000)
+        : undefined;
     return () => {
+      if (timer) clearInterval(timer);
       active = false;
     };
   }, [path, refresh]);

@@ -120,6 +120,12 @@ export function json<T>(v: string | undefined, fallback: T): T {
 }
 export function render(template: string, person: Record<string, unknown>) {
   const fields = {
+    ...json<Record<string, unknown>>(
+      typeof person.custom === "string"
+        ? person.custom
+        : JSON.stringify(person.custom || {}),
+      {},
+    ),
     ...person,
     first_name: String(person.name || "").split(" ")[0],
     full_name: person.name,
@@ -127,7 +133,11 @@ export function render(template: string, person: Record<string, unknown>) {
     company_name: person.company,
   };
   return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key) =>
-    String((fields as Record<string, unknown>)[key] ?? ""),
+    String(
+      Object.hasOwn(fields, key)
+        ? ((fields as Record<string, unknown>)[key] ?? "")
+        : "",
+    ),
   );
 }
 export function escapeHtml(s: string) {

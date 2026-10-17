@@ -11,7 +11,7 @@
  *    added, kept in chrome.storage.sync, and gets the bridge script through
  *    chrome.scripting.registerContentScripts (background.ts).
  */
-export const BUILT_IN_ORIGINS: readonly string[] = ["https://app.agentsdr.ai", "http://localhost:3000"];
+export const BUILT_IN_ORIGINS: readonly string[] = ["https://sdr.genedai.me", "https://app.agentsdr.ai", "http://localhost:3000"];
 
 const STORAGE_KEY = "customAppOrigins";
 

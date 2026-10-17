@@ -83,6 +83,12 @@ beforeAll(async () => {
   );
   // D1 exec accepts multiple statements as separate lines.
   await env.DB.exec(sql);
+  await env.DB.exec(
+    await readFile(
+      new URL("../migrations/0002_upstream_parity.sql", import.meta.url),
+      "utf8",
+    ),
+  );
 }, 30000);
 afterAll(async () => {
   vi.unstubAllGlobals();
@@ -366,7 +372,7 @@ describe("real SQLite API and task integration", () => {
     });
     expect((await data(`/api/tables/${table}/run`, "POST", {})).queued).toBe(1);
     const job = await env.DB.prepare(
-      "SELECT id FROM jobs WHERE kind='enrich' AND org_id=?",
+      "SELECT id FROM jobs WHERE kind='table-row' AND org_id=?",
     )
       .bind(org)
       .first<any>();

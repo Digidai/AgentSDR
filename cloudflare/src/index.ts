@@ -1,6 +1,9 @@
 import { app } from "./api";
 import { processJob, tick } from "./jobs";
 import type { Env } from "./types";
+import quickjsWasm from "./ported/quickjs.wasm";
+import { configureFormulaWasm } from "./features/formula";
+configureFormulaWasm(quickjsWasm);
 export default {
   fetch: app.fetch,
   async scheduled(

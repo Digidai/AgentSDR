@@ -1,0 +1,84 @@
+ALTER TABLE organizations ADD COLUMN slug TEXT;
+ALTER TABLE organizations ADD COLUMN logo TEXT NOT NULL DEFAULT '';
+CREATE UNIQUE INDEX organizations_slug ON organizations(slug) WHERE slug IS NOT NULL;
+ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1;
+CREATE TABLE auth_tokens(id TEXT PRIMARY KEY,user_id TEXT REFERENCES users(id) ON DELETE CASCADE,email TEXT,kind TEXT NOT NULL,token_hash TEXT NOT NULL UNIQUE,expires_at TEXT NOT NULL,used_at TEXT,payload TEXT NOT NULL DEFAULT '{}');
+CREATE TABLE teams(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,name TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),UNIQUE(org_id,name));
+CREATE TABLE team_members(team_id TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,PRIMARY KEY(team_id,user_id));
+CREATE TABLE preferences(org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,key TEXT NOT NULL,value TEXT NOT NULL DEFAULT '{}',updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),PRIMARY KEY(org_id,key));
+CREATE TABLE provider_connections(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,provider TEXT NOT NULL,name TEXT NOT NULL,encrypted TEXT NOT NULL,enabled INTEGER NOT NULL DEFAULT 1,verified_at TEXT,created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE INDEX provider_connections_org ON provider_connections(org_id,provider);
+CREATE TABLE channel_accounts(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,channel TEXT NOT NULL,external_id TEXT,address TEXT COLLATE NOCASE UNIQUE,name TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'connected',is_default INTEGER NOT NULL DEFAULT 0,premium INTEGER NOT NULL DEFAULT 0,signature TEXT NOT NULL DEFAULT '',daily_limit INTEGER,settings TEXT NOT NULL DEFAULT '{}',first_connected_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),last_sent_at TEXT,next_send_at TEXT,history_id TEXT,watch_expires_at TEXT,last_sync_at TEXT,error TEXT NOT NULL DEFAULT '',UNIQUE(channel,external_id));
+ALTER TABLE channel_accounts ADD COLUMN send_lock TEXT;
+CREATE INDEX channel_accounts_scope ON channel_accounts(org_id,channel,status);
+CREATE TABLE campaign_accounts(campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,account_id TEXT NOT NULL REFERENCES channel_accounts(id) ON DELETE CASCADE,PRIMARY KEY(campaign_id,account_id));
+ALTER TABLE enrollments ADD COLUMN account_id TEXT REFERENCES channel_accounts(id) ON DELETE SET NULL;
+ALTER TABLE enrollments ADD COLUMN gate TEXT NOT NULL DEFAULT '';
+ALTER TABLE enrollments ADD COLUMN accepted_at TEXT;
+ALTER TABLE enrollments ADD COLUMN error TEXT NOT NULL DEFAULT '';
+ALTER TABLE enrollments ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE campaigns ADD COLUMN settings TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE steps ADD COLUMN settings TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE messages ADD COLUMN account_id TEXT REFERENCES channel_accounts(id) ON DELETE SET NULL;
+ALTER TABLE messages ADD COLUMN thread_id TEXT;
+ALTER TABLE messages ADD COLUMN read_at TEXT;
+ALTER TABLE messages ADD COLUMN important INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE messages ADD COLUMN metadata TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE people ADD COLUMN category TEXT;
+ALTER TABLE people ADD COLUMN subcategory_id TEXT;
+ALTER TABLE people ADD COLUMN snoozed_until TEXT;
+CREATE TABLE lead_fields(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,key TEXT NOT NULL,name TEXT NOT NULL,type TEXT NOT NULL,options TEXT NOT NULL DEFAULT '[]',position INTEGER NOT NULL DEFAULT 0,entity TEXT NOT NULL DEFAULT 'person',UNIQUE(org_id,entity,key));
+CREATE TABLE lead_notes(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,person_id TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,body TEXT NOT NULL,created_by TEXT REFERENCES users(id) ON DELETE SET NULL,created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE TABLE lead_tasks(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,person_id TEXT REFERENCES people(id) ON DELETE CASCADE,title TEXT NOT NULL,due_at TEXT,status TEXT NOT NULL DEFAULT 'open',assigned_to TEXT REFERENCES users(id) ON DELETE SET NULL,created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE TABLE folders(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,name TEXT NOT NULL,parent_id TEXT REFERENCES folders(id) ON DELETE SET NULL);
+CREATE TABLE workbooks(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,name TEXT NOT NULL,folder_id TEXT REFERENCES folders(id) ON DELETE SET NULL,position INTEGER NOT NULL DEFAULT 0);
+ALTER TABLE enrichment_tables ADD COLUMN workbook_id TEXT REFERENCES workbooks(id) ON DELETE SET NULL;
+ALTER TABLE enrichment_tables ADD COLUMN folder_id TEXT REFERENCES folders(id) ON DELETE SET NULL;
+ALTER TABLE enrichment_tables ADD COLUMN view TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE enrichment_tables ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE enrichment_tables ADD COLUMN auto_run INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE table_rows ADD COLUMN cell_meta TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE table_rows ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE cell_runs(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,table_id TEXT NOT NULL REFERENCES enrichment_tables(id) ON DELETE CASCADE,row_id TEXT NOT NULL REFERENCES table_rows(id) ON DELETE CASCADE,column_key TEXT NOT NULL,status TEXT NOT NULL,attempt INTEGER NOT NULL DEFAULT 1,provider_state TEXT NOT NULL DEFAULT '{}',value TEXT,outputs TEXT,provider TEXT,cost_cents REAL NOT NULL DEFAULT 0,error TEXT NOT NULL DEFAULT '',audit TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE INDEX cell_runs_lookup ON cell_runs(org_id,table_id,row_id,column_key,created_at);
+CREATE TABLE crm_subcategories(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,category TEXT NOT NULL,name TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',sequence_id TEXT,position INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE crm_sequences(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,name TEXT NOT NULL,steps TEXT NOT NULL DEFAULT '[]',published_version INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE TABLE crm_sequence_versions(sequence_id TEXT NOT NULL REFERENCES crm_sequences(id) ON DELETE CASCADE,version INTEGER NOT NULL,steps TEXT NOT NULL,published_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),PRIMARY KEY(sequence_id,version));
+CREATE TABLE crm_enrollments(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,person_id TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,sequence_id TEXT NOT NULL REFERENCES crm_sequences(id) ON DELETE CASCADE,version INTEGER NOT NULL,step INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL DEFAULT 'active',next_run TEXT NOT NULL,draft_id TEXT REFERENCES drafts(id) ON DELETE SET NULL,created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE UNIQUE INDEX crm_enrollments_active ON crm_enrollments(org_id,person_id) WHERE status IN ('active','paused');
+CREATE TABLE classifications(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,person_id TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,message_id TEXT REFERENCES messages(id) ON DELETE SET NULL,category TEXT NOT NULL,subcategory_id TEXT,reason TEXT NOT NULL DEFAULT '',confidence REAL NOT NULL DEFAULT 0,previous TEXT NOT NULL DEFAULT '{}',acknowledged_at TEXT,undone_at TEXT,created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE TABLE send_attempts(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,person_id TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,account_id TEXT REFERENCES channel_accounts(id) ON DELETE SET NULL,status TEXT NOT NULL,external_id TEXT,error TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE TABLE connections(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,account_id TEXT NOT NULL REFERENCES channel_accounts(id) ON DELETE CASCADE,person_id TEXT REFERENCES people(id) ON DELETE SET NULL,provider_id TEXT NOT NULL,name TEXT,accepted_at TEXT,metadata TEXT NOT NULL DEFAULT '{}',UNIQUE(org_id,account_id,provider_id));
+CREATE TABLE chats(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,account_id TEXT NOT NULL REFERENCES channel_accounts(id) ON DELETE CASCADE,external_id TEXT NOT NULL,person_id TEXT REFERENCES people(id) ON DELETE SET NULL,name TEXT,unread INTEGER NOT NULL DEFAULT 0,metadata TEXT NOT NULL DEFAULT '{}',UNIQUE(org_id,account_id,external_id));
+CREATE TABLE search_batches(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,name TEXT NOT NULL,account_id TEXT REFERENCES channel_accounts(id) ON DELETE SET NULL,status TEXT NOT NULL DEFAULT 'draft',created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE TABLE search_queries(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,batch_id TEXT NOT NULL REFERENCES search_batches(id) ON DELETE CASCADE,query TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',cursor TEXT,results TEXT NOT NULL DEFAULT '[]',error TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE TABLE call_campaigns(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,name TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'active',created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE TABLE call_contacts(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,campaign_id TEXT NOT NULL REFERENCES call_campaigns(id) ON DELETE CASCADE,person_id TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,stage TEXT NOT NULL DEFAULT 'to_call',call_status TEXT NOT NULL DEFAULT 'new',unanswered_attempts INTEGER NOT NULL DEFAULT 0,follow_up_at TEXT,notes TEXT NOT NULL DEFAULT '',last_called_at TEXT,UNIQUE(campaign_id,person_id));
+CREATE TABLE calls(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,person_id TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,contact_id TEXT REFERENCES call_contacts(id) ON DELETE SET NULL,phone TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',recorder_token_hash TEXT NOT NULL,token_expires_at TEXT NOT NULL,recording_key TEXT,recording_bytes INTEGER,content_type TEXT,upload_id TEXT,upload_parts TEXT NOT NULL DEFAULT '[]',started_at TEXT,ended_at TEXT,duration_ms INTEGER,recording_offset_ms INTEGER,disposition TEXT,error TEXT,transcript_status TEXT NOT NULL DEFAULT 'none',transcript TEXT,transcript_error TEXT,created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE INDEX calls_person ON calls(org_id,person_id,created_at);
+CREATE TABLE webhook_events(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,provider TEXT NOT NULL,payload TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',error TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE TABLE prospecting_campaigns(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,name TEXT NOT NULL,criteria TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'draft',created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+CREATE TABLE prospects(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,campaign_id TEXT NOT NULL REFERENCES prospecting_campaigns(id) ON DELETE CASCADE,domain TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',result TEXT NOT NULL DEFAULT '{}',error TEXT NOT NULL DEFAULT '',UNIQUE(campaign_id,domain));
+
+ALTER TABLE crm_subcategories ADD COLUMN guidance TEXT NOT NULL DEFAULT '';
+ALTER TABLE crm_subcategories ADD COLUMN stage_rank INTEGER;
+
+CREATE TABLE identity_exceptions(id TEXT PRIMARY KEY,org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,channel TEXT NOT NULL,external_id TEXT NOT NULL,payload TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'open',person_id TEXT,created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),UNIQUE(org_id,channel,external_id));
+
+CREATE INDEX identity_exceptions_status ON identity_exceptions(org_id,status,created_at);
+ALTER TABLE companies ADD COLUMN custom TEXT NOT NULL DEFAULT '{}';
+
+ALTER TABLE table_rows ADD COLUMN run_lock TEXT;
+ALTER TABLE table_rows ADD COLUMN run_lock_until TEXT;
+ALTER TABLE table_rows ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE domain_catalog(org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,domain TEXT NOT NULL,country TEXT NOT NULL DEFAULT '',c1 TEXT NOT NULL DEFAULT '',c2 TEXT NOT NULL DEFAULT '',c3 TEXT NOT NULL DEFAULT '',platform TEXT NOT NULL DEFAULT '',revenue REAL NOT NULL DEFAULT 0,apps TEXT NOT NULL DEFAULT '[]',metadata TEXT NOT NULL DEFAULT '{}',PRIMARY KEY(org_id,domain));
+CREATE INDEX domain_catalog_filters ON domain_catalog(org_id,country,c1,c2,c3,platform,revenue);
+ALTER TABLE prospecting_campaigns ADD COLUMN settings TEXT NOT NULL DEFAULT '{}';
+
+ALTER TABLE classifications ADD COLUMN decision TEXT NOT NULL DEFAULT 'auto_apply';
+ALTER TABLE classifications ADD COLUMN applied_at TEXT;
+ALTER TABLE people ADD COLUMN category_locked INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE people ADD COLUMN crm_context INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE files ADD COLUMN table_id TEXT REFERENCES enrichment_tables(id) ON DELETE CASCADE;

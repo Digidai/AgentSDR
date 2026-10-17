@@ -27,11 +27,44 @@ export async function uploadRecording(
   endedAt: number,
   answeredAt: number = startedAt,
 ): Promise<void> {
-  const request: UploadUrlRequest = { contentType: blob.type, bytes: blob.size };
-  const { uploadUrl, recordingKey, headers } = await callApi<UploadUrlResponse>(call, "upload-url", request);
+  const request: UploadUrlRequest = {
+    contentType: blob.type,
+    bytes: blob.size,
+  };
+  const { uploadUrl, recordingKey, headers, multipart } =
+    await callApi<UploadUrlResponse>(call, "upload-url", request);
 
-  const put = await fetch(uploadUrl, { method: "PUT", headers, body: blob });
-  if (!put.ok) throw new Error(`storage answered ${put.status}`);
+  if (multipart) {
+    const parts: { partNumber: number; etag: string }[] = [];
+    for (
+      let start = 0, part = 1;
+      start < blob.size;
+      start += multipart.partSize, part++
+    ) {
+      const url = new URL(uploadUrl);
+      url.searchParams.set("part", String(part));
+      const response = await fetch(url, {
+        method: "PUT",
+        headers,
+        body: blob.slice(start, start + multipart.partSize),
+      });
+      if (!response.ok)
+        throw new Error(`storage part ${part} answered ${response.status}`);
+      parts.push(
+        (await response.json()) as { partNumber: number; etag: string },
+      );
+    }
+    const completed = await fetch(multipart.completeUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parts }),
+    });
+    if (!completed.ok)
+      throw new Error(`storage completion answered ${completed.status}`);
+  } else {
+    const put = await fetch(uploadUrl, { method: "PUT", headers, body: blob });
+    if (!put.ok) throw new Error(`storage answered ${put.status}`);
+  }
 
   const finish: FinishCallRequest = {
     outcome: "recorded",
@@ -50,22 +83,37 @@ export async function uploadRecording(
 export async function getCallStatus(
   call: Pick<ActiveCall, "apiBase" | "callId" | "recorderToken">,
 ): Promise<RecorderCallStatus> {
-  const response = await fetch(`${call.apiBase}/api/call-recorder/calls/${call.callId}`, {
-    headers: { Authorization: `Bearer ${call.recorderToken}` },
-  });
+  const response = await fetch(
+    `${call.apiBase}/api/call-recorder/calls/${call.callId}`,
+    {
+      headers: { Authorization: `Bearer ${call.recorderToken}` },
+    },
+  );
   if (!response.ok) throw new Error(`status answered ${response.status}`);
   return (await response.json()) as RecorderCallStatus;
 }
 
 /** POSTs to /api/call-recorder/calls/:id/<action> with the call's token. */
-export async function callApi<T = unknown>(call: ReportableCall, action: string, body: unknown): Promise<T> {
-  const response = await fetch(`${call.apiBase}/api/call-recorder/calls/${call.callId}/${action}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${call.recorderToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+export async function callApi<T = unknown>(
+  call: ReportableCall,
+  action: string,
+  body: unknown,
+): Promise<T> {
+  const response = await fetch(
+    `${call.apiBase}/api/call-recorder/calls/${call.callId}/${action}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${call.recorderToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    },
+  );
   if (!response.ok) {
-    const detail = (await response.json().catch(() => null)) as { error?: string } | null;
+    const detail = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
     throw new Error(detail?.error ?? `${action} answered ${response.status}`);
   }
   return (await response.json()) as T;

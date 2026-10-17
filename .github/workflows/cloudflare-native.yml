@@ -2,9 +2,9 @@ name: Cloudflare native
 on:
   push:
     branches: [cloudflare-native]
-    paths: ["cloudflare/**", ".github/workflows/cloudflare-native.yml"]
+    paths: ["cloudflare/**", ".github/workflows/cloudflare-native.yml", "extensions/whatsapp-recorder/**", "src/lib/calls/contract.ts"]
   pull_request:
-    paths: ["cloudflare/**", ".github/workflows/cloudflare-native.yml"]
+    paths: ["cloudflare/**", ".github/workflows/cloudflare-native.yml", "extensions/whatsapp-recorder/**", "src/lib/calls/contract.ts"]
 permissions:
   contents: read
 concurrency:
@@ -26,4 +26,4 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm audit
-      - run: npx wrangler deploy --dry-run
+      - run: npm run check:runtime

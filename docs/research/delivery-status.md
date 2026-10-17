@@ -1,31 +1,33 @@
 # AgentSDR Cloudflare native delivery status
 
-## Authorized scope
+## Authorized scope and source
 
-The user requested an SDR based on Kandid-ai/AgentSDR at sdr.genedai.me, selected an entirely Cloudflare/D1 rewrite, and requested a GitHub fork. Fork: https://github.com/Digidai/AgentSDR, native branch cloudflare-native. Upstream baseline: bdbf5efd2017347181f5bf549b54d89c1ae6e5f5 (MIT).
+The user requested a Cloudflare-only SDR with D1, the GitHub fork, and migration of the remaining upstream functionality followed by tests, push and deployment. Repository: https://github.com/Digidai/AgentSDR, branch `cloudflare-native`. Baseline: Kandid-ai/AgentSDR v0.3.1, `bdbf5efd2017347181f5bf549b54d89c1ae6e5f5` (MIT).
 
-## Implemented
+## Implementation
 
-React workspace and Worker API; private owner bootstrap and sessions; scoped people/company records; CSV/Excel import preview and safe CSV export; stages and DNC; multichannel campaigns with timed steps/enrollment; unified messages; AI classification and editable human-sent drafts; enrichment tables with AI/HTTP/Hunter/Apollo columns; knowledge; members and invitations; private R2 attachments and queued audio transcription; real message/pipeline analytics; durable D1 jobs, queues, recovery Cron, idempotent send claims and ambiguous-provider holds.
+The implemented upstream feature families now have Cloudflare-native equivalents. See [upstream-parity.md](upstream-parity.md) and the 203-file source-route inventory. The migration includes all 15 enrichment providers / 84 implemented handlers; typed grid operations and QuickJS; OpenRouter BYOK/catalog/schema/examples/research/images; delegated Gmail send/history/watch; LinkedIn/WhatsApp accounts, rules, pools, pacing, acceptance, searches/chats/webhooks; CRM taxonomy/policy/review/versioned follow-ups; calling/recorder/R2 multipart/audio; organizations, teams, invitations and Google/password-recovery flows; domain catalog/filter/Apollo qualification/parent review; analytics and durable delayed Queue jobs.
+
+The native APIs are redesigned; legacy Next.js clients are not wire compatible. Upstream declaration-only grid runners and the deferred ads stage were not implemented upstream. Debug environment disclosure is intentionally replaced by non-sensitive health checks. Upstream does not include its private domain dataset; the native workspace supports importing an organization's own catalog.
+
+## Verification before release
+
+- Native TypeScript, 186 tests, frontend/recorder build and npm audit passed (0 vulnerabilities).
+- Eight checks passed against the actual compiled Worker in workerd, including static QuickJS WASM, libraries, WebCrypto, D1 and recorder session creation.
+- Tests use real local D1/R2 and selected mock provider transports. The 84 registered handler contracts and all 15 unauthorized provider checks are distinct from full live provider execution.
+- Upstream root TypeScript passed; root lint has 0 errors and 6 existing warnings.
+- The private production D1 export was saved under ignored `.wrangler/backups/` before migration. No backup contents or secrets are committed.
+
+## Release state
+
+Implementation is ready for release; push, CI, migration 0002 and production deployment are being completed in this continuation. `deployment.json` and `live-verification.json` still identify the previous live runtime until the new deployment is verified. Historical evidence for `d9c3fa2` is preserved in `history/`.
 
 ## Infrastructure
 
-- Account: Gene Dai Account (48d9ccaf5ee7914c803b5d0656462848).
-- Worker: agentsdr-native. Domain: sdr.genedai.me.
-- D1: agentsdr-native, 6f1a38df-84f6-4bbd-b665-2ca0e720d17e; migration 0001_native.sql applied remotely.
-- R2: agentsdr-native-media (private).
-- Queues: agentsdr-native-tasks / agentsdr-native-dead.
-- Cron: every five minutes. AI: @cf/meta/llama-3.3-70b-instruct-fp8-fast.
-- Encryption, unsubscribe, and bootstrap secrets stored as Worker secrets; local backups ignored by Git and mode 0600. No credential values belong in this file.
+Gene Dai Account (`48d9ccaf5ee7914c803b5d0656462848`); Worker `agentsdr-native`; custom domain `sdr.genedai.me`; D1 `agentsdr-native` (`6f1a38df-84f6-4bbd-b665-2ca0e720d17e`); private R2 `agentsdr-native-media`; Queues `agentsdr-native-tasks` and `agentsdr-native-dead`; Cron every five minutes with delayed Queue continuations; Workers AI default `@cf/meta/llama-3.3-70b-instruct-fp8-fast`. Secret backups are ignored and mode 0600.
 
-## Verification
+## Configuration and acceptance boundaries
 
-TypeScript, 24 focused unit/API/task tests, production frontend build, Wrangler dry-run, and npm audit pass. Tests use real local D1/R2 emulation and mock provider/model responses. Upstream root TypeScript also passed; upstream lint completed with six existing warnings and no errors. Production release `d9c3fa27bf85f5367aa258ea3b79ba82422ca9ec` is live as Worker version `b20e2346-eb58-4052-b2ff-42fdcf10d8d4` (100% traffic). GitHub Actions run 39041143468 passed on that exact SHA. The live verification report records 22 passing checks: real Workers AI through Queues produced a persisted editable draft, no automatic send occurred, authenticated D1/R2 operations worked, private routes/attachments were denied to anonymous callers, cross-origin mutations were blocked, and application assets matched the build. HTML is compared after removing the observed zone-level Cloudflare JavaScript Detection injection. Synthetic test organization/account/data were removed; owner initialization remains available. See live-verification.json and deployment.json. A later documentation/verification-script closeout commit does not represent a different deployed runtime.
+Production was still uninitialized at the pre-migration check. Preserve the existing private bootstrap token and let the user create the owner. No real contacts, provider credentials or outbound messages are added by this migration. Gmail/Google sign-in, Unipile, provider APIs, authentication email and strict BYOK require the user's accounts/keys in the workspace settings.
 
-## Not configured or not verified
-
-Owner account setup is intentionally left to the user through a private one-time setup link. No real leads or external provider credentials are imported. No real outreach is sent during deployment. Configure a verified Resend sender or Unipile accounts before sending. Provider acceptance, delivery, inbox placement, replies, meetings and business outcomes remain distinct.
-
-Resend/Unipile/Hunter/Apollo adapters are implemented but untested with real customer credentials. Audio transcription is implemented but not exercised with a real recording. Browser interaction/responsive screenshots are not run: upstream AGENTS.md limits unsolicited browser automation. Manual verification: create owner, check navigation and forms at desktop and mobile widths, import a small list, inspect a draft and configure a channel before a controlled recipient test.
-
-This is not full upstream parity. Unported: Google Workspace mailbox sending/sync, full enrichment provider catalog, QuickJS/formulas, advanced account pools/warm-up and platform-specific account limits, automatic connection acceptance gates, browser calling/recording, upstream recorder extension integration, Google sign-in and auth-email reset/invitations. Upstream source retained in this fork is not evidence of a deployed native feature. See cloudflare/README.md for the operational contract.
+Automated fixture coverage does not establish actual Gmail delivery, LinkedIn/WhatsApp account permissions, BYOK billing configuration, real microphone capture or completed phone calls. `AGENTS.md` excludes unsolicited browser automation, so no browser interaction or responsive screenshots are claimed. Manual acceptance: owner setup; desktop/mobile navigation; small CSV import and formula edit; provider connection and an owned-recipient email; recorder installation/WhatsApp login and a controlled real call.

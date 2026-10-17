@@ -2705,3 +2705,114 @@ tr.clickable:hover {
     scroll-behavior: auto !important;
   }
 }
+
+/* Extended workspaces share the existing ivory/green visual language. */
+.extended-panel {
+  margin: 20px 0;
+}
+.extended-panel > header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border, #e4e6df);
+}
+.extended-panel h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.extended-body {
+  padding: 20px 24px;
+}
+.extended-form {
+  margin: 16px 0 24px;
+}
+.extended-form .span-all {
+  grid-column: 1 / -1;
+}
+.extended-stack {
+  display: grid;
+  gap: 16px;
+}
+.extended-empty {
+  padding: 24px 0;
+}
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.row-actions select {
+  max-width: 180px;
+}
+.check-row {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  align-items: center;
+}
+.check-row input,
+input[type="checkbox"] {
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  accent-color: #245744;
+}
+.cell-value {
+  display: block;
+  max-width: 300px;
+  max-height: 100px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.cell-status {
+  display: block;
+  color: #728176;
+  font-size: 10px;
+  margin-top: 4px;
+}
+.cell-error {
+  color: #af4138;
+}
+.cell-processing {
+  color: #a7742b;
+}
+.column-editor {
+  border: 1px solid #d9e1d8;
+  border-radius: 12px;
+  margin-top: 20px;
+}
+.column-editor .field {
+  margin: 12px 0;
+}
+.extended-panel audio,
+.modal audio {
+  display: block;
+  max-width: 100%;
+  margin: 20px 0;
+}
+.sidebar nav {
+  overflow-y: auto;
+  max-height: calc(100vh - 470px);
+  min-height: 230px;
+}
+.code-block {
+  overflow: auto;
+  max-width: 100%;
+  max-height: 400px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .extended-body {
+    padding: 16px;
+  }
+  .row-actions {
+    min-width: 180px;
+  }
+  .sidebar nav {
+    max-height: calc(100dvh - 280px);
+  }
+  .column-editor {
+    padding: 12px;
+  }
+}
+.generated-thumbnail { max-width: 140px; max-height: 100px; border-radius: 8px; display: block; object-fit: contain; margin-bottom: 6px; }

@@ -6,6 +6,7 @@
   "compatibility_date": "2026-10-17",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
+  "rules": [{ "type": "CompiledWasm", "globs": ["**/*.wasm"], "fallthrough": true }],
   "routes": [{ "pattern": "sdr.genedai.me", "custom_domain": true }],
   "assets": {
     "directory": "dist",

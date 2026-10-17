@@ -1,8 +1,8 @@
 # AgentSDR · Cloudflare native fork
 
-This fork runs a new D1-native SDR application at **https://sdr.genedai.me**. It uses Cloudflare Workers, D1, R2, Queues, Cron and Workers AI. Start with **[cloudflare/README.md](cloudflare/README.md)** for setup, deployment and explicit porting limitations.
+This fork runs a new D1-native SDR application at **https://sdr.genedai.me**. It uses Cloudflare Workers, D1, R2, Queues, Cron and Workers AI. Start with **[cloudflare/README.md](cloudflare/README.md)** for setup, deployment and verification boundaries.
 
-The native application is in `cloudflare/` on the `cloudflare-native` branch. Upstream MIT-licensed source and history are preserved below and in the rest of the repository; upstream feature descriptions do not imply native-edition parity.
+The native application is in `cloudflare/` on the `cloudflare-native` branch. Upstream MIT-licensed source and history are preserved below and in the rest of the repository; the implemented feature families have been migrated through native APIs. See the [pinned migration audit](docs/research/upstream-parity.md) and [delivery evidence](docs/research/delivery-status.md); real provider delivery and calls require configured accounts and manual acceptance.
 
 ---
 
