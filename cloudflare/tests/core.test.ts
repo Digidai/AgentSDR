@@ -7,6 +7,7 @@ import {
   emailValid,
   extractJson,
   hashPassword,
+  modelText,
   publicUrl,
   render,
   sendingWindow,
@@ -40,6 +41,19 @@ describe("credential boundaries", () => {
   });
 });
 describe("outreach policy", () => {
+  it("handles live Workers AI text, choices and pre-parsed JSON responses", () => {
+    expect(modelText({ response: "plain text" })).toBe("plain text");
+    expect(
+      modelText({
+        choices: [{ message: { content: '{"draft":"Hello"}' } }],
+        response: { draft: "Hello" },
+      }),
+    ).toBe('{"draft":"Hello"}');
+    expect(modelText({ response: { classification: "interested" } })).toBe(
+      '{"classification":"interested"}',
+    );
+    expect(() => modelText({ response: null })).toThrow();
+  });
   it("uses the workspace timezone and excludes the closing hour", () => {
     const org = { timezone: "Asia/Shanghai", start_hour: 9, end_hour: 18 };
     expect(sendingWindow(org, new Date("2026-10-17T00:59:00Z")).allowed).toBe(

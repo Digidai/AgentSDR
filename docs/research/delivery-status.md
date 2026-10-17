@@ -20,7 +20,7 @@ React workspace and Worker API; private owner bootstrap and sessions; scoped peo
 
 ## Verification
 
-TypeScript, 23 focused unit/API/task tests, production frontend build, Wrangler dry-run, and npm audit pass. Tests use real local D1/R2 emulation and mock provider/model responses. Remote deployment, exact asset checks and real Workers AI proof will be recorded separately in live-verification.json; local tests alone do not prove production.
+TypeScript, 24 focused unit/API/task tests, production frontend build, Wrangler dry-run, and npm audit pass. Tests use real local D1/R2 emulation and mock provider/model responses. Remote deployment, exact asset checks and real Workers AI proof will be recorded separately in live-verification.json; local tests alone do not prove production.
 
 ## Not configured or not verified
 

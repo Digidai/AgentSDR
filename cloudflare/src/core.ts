@@ -190,3 +190,11 @@ export function extractJson<T>(value: string): T {
     throw new Error("AI returned an invalid response; try again");
   return JSON.parse(clean.slice(start, end + 1)) as T;
 }
+
+/** Workers AI can return text, OpenAI choices, or an already parsed JSON response. */
+export function modelText(result: Record<string, any>): string {
+  const value = result?.choices?.[0]?.message?.content ?? result?.response;
+  if (typeof value === "string" && value.trim()) return value;
+  if (value && typeof value === "object") return JSON.stringify(value);
+  throw new Error("AI did not return content. Please retry the task.");
+}

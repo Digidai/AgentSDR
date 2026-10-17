@@ -1,5 +1,13 @@
 import type { Env, Row } from "./types";
-import { decrypt, escapeHtml, publicUrl, render, sign, text } from "./core";
+import {
+  decrypt,
+  escapeHtml,
+  modelText,
+  publicUrl,
+  render,
+  sign,
+  text,
+} from "./core";
 
 export class ProviderError extends Error {
   constructor(
@@ -117,9 +125,7 @@ export async function generate(
     max_tokens: 1200,
     temperature: 0.3,
   });
-  if (typeof result?.response !== "string")
-    throw new Error("AI did not return a text response");
-  return result.response as string;
+  return modelText(result);
 }
 export async function deliver(
   env: Env,
