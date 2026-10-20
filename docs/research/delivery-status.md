@@ -10,7 +10,14 @@ The implemented upstream feature families now have Cloudflare-native equivalents
 
 The native APIs are redesigned; legacy Next.js clients are not wire compatible. Upstream declaration-only grid runners and the deferred ads stage were not implemented upstream. Debug environment disclosure is intentionally replaced by non-sensitive health checks. Upstream does not include its private domain dataset; the native workspace supports importing an organization's own catalog.
 
-## Current audit verification (2026-10-20)
+## Current channel connection verification (2026-10-20)
+
+- TypeScript, **256 tests**, frontend/recorder builds and CI dependency audit passed. Twelve new connection regressions cover prerequisites, trusted Unipile DSN ports, authorization and notification registration.
+- **22 compiled workerd checks** and **29 read-only production checks** passed. The earlier audit fixes are included in this release.
+- No real LinkedIn/WhatsApp account authorization or provider webhook registration was performed by QA. The user must supply a Unipile DSN/API key and complete their own authorization. Production settings metadata confirmed Resend was already saved and Unipile was absent at diagnosis.
+- [Repair details](channel-connection-fix.md), [deployment receipt](channel-connection-deployment.json), [production verification](channel-connection-live-verification.json).
+
+## Prior audit verification (2026-10-20)
 
 - Native TypeScript, **244 tests**, frontend/recorder build and dependency audit passed; 0 known dependency vulnerabilities.
 - The new **53 audit tests** fail 29 scenarios on an isolated copy of `fc015a9` and all pass after fixes. This is a scenario count, not a claim of 29 independent root causes.
@@ -28,7 +35,9 @@ The native APIs are redesigned; legacy Next.js clients are not wire compatible. 
 
 ## Release state
 
-As of **2026-10-20**, production at **https://sdr.genedai.me** runs the audit fixes and legacy follow-up recovery guard from pushed SHA `2ae5f470c6b0ccde91c118a6d3a0b93d3f624c43`. Worker version `7c33560f-0249-4c85-9156-c0cb28e418a9`, deployment `da46f87d-9931-4ce0-a058-70390b942d2e`, receives **100% traffic**. [CI 39414037184](https://github.com/Digidai/AgentSDR/actions/runs/39414037184) passed on that exact SHA with 244 tests and 19 compiled runtime checks. Production checks confirm exact SHA, existing initialized owner, authentication and recording boundaries, security headers, HTML and asset hashes. No schema migration was required.
+As of **2026-10-20**, production at **https://sdr.genedai.me** runs the channel connection repair from pushed SHA `16d03cc783c2a7a849fad60625721e83dafb42d3`. Worker version `fd2c2498-91a3-47e7-8daf-8d2dbcb1d436`, deployment `ac506e4c-a10d-4ae8-8af2-4af8c3e1b294`, receives **100% traffic**. [CI 39445788769](https://github.com/Digidai/AgentSDR/actions/runs/39445788769) passed on that exact SHA. Production checks confirm exact SHA, existing initialized owner, authentication and recording boundaries, security headers, HTML and asset hashes. No schema migration was required.
+
+The preceding audit fixes and legacy follow-up recovery guard used SHA `2ae5f470c6b0ccde91c118a6d3a0b93d3f624c43`, Worker version `7c33560f-0249-4c85-9156-c0cb28e418a9`, deployment `da46f87d-9931-4ce0-a058-70390b942d2e`, and [CI 39414037184](https://github.com/Digidai/AgentSDR/actions/runs/39414037184) with 244 tests and 19 compiled runtime checks. Those fixes remain included.
 
 The earlier provider connection repair used pushed SHA `e53318462ac56bf5e836d3d3ec3e6c2182a7d4b2`, Worker version `0a991800-da75-401a-8e50-be3419ece63d` and [CI 39396361717](https://github.com/Digidai/AgentSDR/actions/runs/39396361717), with 191 tests and 12 compiled checks. Its [repair details](resend-connection-fix.md) and [historical receipt](resend-connection-deployment.json) remain available. This audit does not establish the outcome of any later user-initiated real provider delivery.
 

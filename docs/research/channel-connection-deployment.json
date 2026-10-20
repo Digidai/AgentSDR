@@ -1,0 +1,25 @@
+{
+  "host": "https://sdr.genedai.me",
+  "deployed_code_sha": "16d03cc783c2a7a849fad60625721e83dafb42d3",
+  "worker_version_id": "fd2c2498-91a3-47e7-8daf-8d2dbcb1d436",
+  "deployment_id": "ac506e4c-a10d-4ae8-8af2-4af8c3e1b294",
+  "deployed_at": "2026-10-20T15:09:31.171889Z",
+  "traffic_percentage": 100,
+  "checked_at": "2026-10-20T15:09:57.535Z",
+  "ci": {
+    "url": "https://github.com/Digidai/AgentSDR/actions/runs/39445788769",
+    "head_sha": "16d03cc783c2a7a849fad60625721e83dafb42d3",
+    "conclusion": "success"
+  },
+  "native_tests": 256,
+  "channel_connection_regressions": 12,
+  "compiled_workerd_checks": 22,
+  "read_only_live_checks": 29,
+  "schema_migrations": 0,
+  "production_business_data_mutations_by_qa": 0,
+  "real_provider_calls_by_qa": 0,
+  "real_messages_sent_by_qa": 0,
+  "real_channel_authorization_verified": false,
+  "unipile_configured_at_diagnosis": false,
+  "prior_audit_fixes_preserved": true
+}
