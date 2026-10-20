@@ -1,0 +1,32 @@
+{
+  "host": "https://sdr.genedai.me",
+  "deployed_code_sha": "2acfefa68e94ad16cbe4037376018387a7d02e5a",
+  "worker_version_id": "0378f27c-d627-4f04-8c14-13b487ec35d8",
+  "deployment_id": "5dc128e5-705a-4c26-a803-4c66b44abc5f",
+  "deployed_at": "2026-10-20T15:44:16.732432Z",
+  "traffic_percentage": 100,
+  "checked_at": "2026-10-20T15:44:45.674Z",
+  "ci": {
+    "url": "https://github.com/Digidai/AgentSDR/actions/runs/39450892717",
+    "head_sha": "2acfefa68e94ad16cbe4037376018387a7d02e5a",
+    "conclusion": "success"
+  },
+  "native_tests": 312,
+  "new_team_regression_scenarios": 56,
+  "baseline_failures": 40,
+  "baseline_positive_controls": 16,
+  "compiled_workerd_checks": 25,
+  "read_only_live_checks": 29,
+  "dependency_audit_known_vulnerabilities": 0,
+  "browser_interaction_checks": 13,
+  "browser_environment": "Local synthetic owner and data; mocked AI/provider transports and hosted authorization",
+  "independent_reviewers": 3,
+  "remaining_proven_p1_p2_in_reviewed_delta": 0,
+  "schema_migrations": 0,
+  "production_business_data_mutations_by_qa": 0,
+  "real_provider_calls_by_qa": 0,
+  "real_messages_sent_by_qa": 0,
+  "real_channel_authorization_verified": false,
+  "architecture": "Cloudflare Workers, D1, R2, Queues, Cron and Workers AI",
+  "limits": "Does not prove the absence of all defects or real provider delivery, account authorization, microphone capture or phone calls."
+}

@@ -10,7 +10,16 @@ The implemented upstream feature families now have Cloudflare-native equivalents
 
 The native APIs are redesigned; legacy Next.js clients are not wire compatible. Upstream declaration-only grid runners and the deferred ads stage were not implemented upstream. Debug environment disclosure is intentionally replaced by non-sensitive health checks. Upstream does not include its private domain dataset; the native workspace supports importing an organization's own catalog.
 
-## Current channel connection verification (2026-10-20)
+## Current agent-team verification (2026-10-20)
+
+- Three independent agents reviewed security, delivery reliability, tables and calls, then cross-reviewed the fixes. No proven P1/P2 remains in the reviewed delta; this does not guarantee that every possible defect is absent.
+- TypeScript, **312 tests**, frontend/recorder builds, CI dependency audit (**0 known vulnerabilities**) and **25 compiled workerd checks** passed.
+- The 56 new scenarios fail 40 cases on isolated tracked baseline `0eff221`; 16 baseline controls pass. This counts scenarios, not independent root causes.
+- User-authorized local browser QA passed 13 documented checks using a synthetic owner, isolated local D1/R2 and fixture providers. It includes channel setup/authorization entry points, contact creation, automatic AI draft appearance, formula preview/execution and 390px mobile navigation/layout.
+- **29 GET-only production checks** passed on the exact release. No production business data, real provider authorization, messages or calls were touched by QA. No schema migration was required.
+- [Team audit](agent-team-audit-2026-10-20.md), [baseline comparison](agent-team-baseline.json), [browser record](agent-team-browser-verification.json), [deployment receipt](agent-team-deployment.json), [production verification](agent-team-live-verification.json).
+
+## Previous channel connection verification (2026-10-20)
 
 - TypeScript, **256 tests**, frontend/recorder builds and CI dependency audit passed. Twelve new connection regressions cover prerequisites, trusted Unipile DSN ports, authorization and notification registration.
 - **22 compiled workerd checks** and **29 read-only production checks** passed. The earlier audit fixes are included in this release.
@@ -35,7 +44,9 @@ The native APIs are redesigned; legacy Next.js clients are not wire compatible. 
 
 ## Release state
 
-As of **2026-10-20**, production at **https://sdr.genedai.me** runs the channel connection repair from pushed SHA `16d03cc783c2a7a849fad60625721e83dafb42d3`. Worker version `fd2c2498-91a3-47e7-8daf-8d2dbcb1d436`, deployment `ac506e4c-a10d-4ae8-8af2-4af8c3e1b294`, receives **100% traffic**. [CI 39445788769](https://github.com/Digidai/AgentSDR/actions/runs/39445788769) passed on that exact SHA. Production checks confirm exact SHA, existing initialized owner, authentication and recording boundaries, security headers, HTML and asset hashes. No schema migration was required.
+As of **2026-10-20**, production at **https://sdr.genedai.me** runs the agent-team audit fixes from pushed SHA `2acfefa68e94ad16cbe4037376018387a7d02e5a`. Worker version `0378f27c-d627-4f04-8c14-13b487ec35d8`, deployment `5dc128e5-705a-4c26-a803-4c66b44abc5f`, receives **100% traffic**. [CI 39450892717](https://github.com/Digidai/AgentSDR/actions/runs/39450892717) passed on that exact SHA. The 29 production checks confirm exact SHA, existing initialized owner, authentication and recording boundaries, security headers, HTML and asset hashes. No schema migration was required.
+
+The preceding channel connection repair used SHA `16d03cc783c2a7a849fad60625721e83dafb42d3`, Worker version `fd2c2498-91a3-47e7-8daf-8d2dbcb1d436`, deployment `ac506e4c-a10d-4ae8-8af2-4af8c3e1b294` and [CI 39445788769](https://github.com/Digidai/AgentSDR/actions/runs/39445788769), with 256 tests, 22 compiled checks and 29 read-only production checks. Those fixes remain included.
 
 The preceding audit fixes and legacy follow-up recovery guard used SHA `2ae5f470c6b0ccde91c118a6d3a0b93d3f624c43`, Worker version `7c33560f-0249-4c85-9156-c0cb28e418a9`, deployment `da46f87d-9931-4ce0-a058-70390b942d2e`, and [CI 39414037184](https://github.com/Digidai/AgentSDR/actions/runs/39414037184) with 244 tests and 19 compiled runtime checks. Those fixes remain included.
 
@@ -55,4 +66,4 @@ Gene Dai Account (`48d9ccaf5ee7914c803b5d0656462848`); Worker `agentsdr-native`;
 
 Production now has an initialized owner. Preserve the existing workspace, provider configuration and private bootstrap token. This audit added no real contacts, provider credentials or outbound messages. Gmail/Google sign-in, Unipile, provider APIs, authentication email and strict BYOK require the user's accounts/keys in the workspace settings.
 
-Automated fixture coverage does not establish actual Gmail delivery, LinkedIn/WhatsApp account permissions, BYOK billing configuration, real microphone capture or completed phone calls. `AGENTS.md` excludes unsolicited browser automation, so no browser interaction or responsive screenshots are claimed. Manual acceptance: owner setup; desktop/mobile navigation; small CSV import and formula edit; provider connection and an owned-recipient email; recorder installation/WhatsApp login and a controlled real call.
+Automated fixture coverage does not establish actual Gmail delivery, LinkedIn/WhatsApp account permissions, BYOK billing configuration, real microphone capture or completed phone calls. The user explicitly authorized local synthetic browser interaction for this audit; the browser record lists the exercised flows and its fixture boundaries. Remaining real-account acceptance: configure providers, complete account authorization and verify an owned-recipient email; verify recorder installation/WhatsApp login and a controlled real call. Existing production users and provider settings must be preserved.
