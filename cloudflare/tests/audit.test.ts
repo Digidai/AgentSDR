@@ -1065,6 +1065,26 @@ it("cannot undo old history over a newer classification with the same visible st
     (await sql("SELECT stage FROM people WHERE id=?", pid).first<Row>())!.stage,
   ).toBe("interested");
 });
+it("blocks legacy queued follow-ups whose stopped sequence already lost its draft link", async () => {
+  const s = await sequence();
+  await sql(
+    "UPDATE crm_enrollments SET status='stopped',draft_id=NULL WHERE id=?",
+    s.eid,
+  ).run();
+  expect((await req(`/drafts/${s.did}/send`, "POST", {})).status).toBe(409);
+  await sql("UPDATE drafts SET status='queued' WHERE id=?", s.did).run();
+  const transport = vi.fn(async () => Response.json({ id: "must-not-send" }));
+  vi.stubGlobal("fetch", transport);
+  await processJob(
+    env,
+    await enqueue(env, org, "send", { person_id: s.pid, draft_id: s.did }),
+  );
+  expect(transport).not.toHaveBeenCalled();
+  expect(
+    (await sql("SELECT status FROM drafts WHERE id=?", s.did).first<Row>())!
+      .status,
+  ).toBe("discarded");
+});
 
 // Shared fixtures are private to this temporary D1/R2 instance. Every mutation
 // below targets a real foreign row; a missing-row check alone is insufficient.

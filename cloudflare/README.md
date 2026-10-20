@@ -73,4 +73,4 @@ MIT license: [LICENSE](../LICENSE). Ported upstream and third-party notices: [po
 
 ## Bug audit (2026-10-20)
 
-See [the audit report](../docs/research/bug-audit-2026-10-20.md) for the 52-scenario baseline comparison, fixes and acceptance boundaries. For an initialized production workspace, use `node scripts/live-readonly-check.mjs <exact-deployed-sha> <output-json>`; the fresh-install checker must not be rerun. The read-only checker makes GET requests only.
+See [the audit report](../docs/research/bug-audit-2026-10-20.md) for the 53-scenario baseline comparison, fixes and acceptance boundaries. For an initialized production workspace, use `node scripts/live-readonly-check.mjs <exact-deployed-sha> <output-json>`; the fresh-install checker must not be rerun. The read-only checker makes GET requests only.

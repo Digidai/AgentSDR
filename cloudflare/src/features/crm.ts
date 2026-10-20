@@ -1140,7 +1140,7 @@ crmFeatures.post("/drafts/:id/send", async (c) => {
   // cannot strand a queued draft without a durable job for Cron to publish.
   const result = await c.env.DB.batch([
     c.env.DB.prepare(
-      "UPDATE drafts SET status='queued' WHERE id=? AND org_id=? AND status='pending' AND NOT EXISTS(SELECT 1 FROM crm_enrollments WHERE org_id=? AND draft_id=? AND status<>'active') AND NOT EXISTS(SELECT 1 FROM jobs WHERE id=? AND status IN ('uncertain','done','running')) AND EXISTS(SELECT 1 FROM people WHERE id=? AND org_id=? AND dnc=0 AND crm_context=?) RETURNING id",
+      "UPDATE drafts SET status='queued' WHERE id=? AND org_id=? AND status='pending' AND (id NOT GLOB 'sequence-draft:*' OR EXISTS(SELECT 1 FROM crm_enrollments e WHERE e.org_id=drafts.org_id AND e.draft_id=drafts.id AND e.status='active')) AND NOT EXISTS(SELECT 1 FROM crm_enrollments WHERE org_id=? AND draft_id=? AND status<>'active') AND NOT EXISTS(SELECT 1 FROM jobs WHERE id=? AND status IN ('uncertain','done','running')) AND EXISTS(SELECT 1 FROM people WHERE id=? AND org_id=? AND dnc=0 AND crm_context=?) RETURNING id",
     ).bind(d.id, orgId(c), orgId(c), d.id, jid, p.id, orgId(c), p.crm_context),
     c.env.DB.prepare(
       "INSERT OR IGNORE INTO jobs(id,org_id,kind,payload) SELECT ?,?,'send',? WHERE EXISTS(SELECT 1 FROM drafts WHERE id=? AND org_id=? AND status='queued')",

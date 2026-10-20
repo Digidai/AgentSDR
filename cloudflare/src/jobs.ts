@@ -184,8 +184,21 @@ async function sendJob(env: Env, job: Row, payload: Row) {
     )
       .bind(job.org_id, draft.id)
       .first<Row>();
-    if (sequence && sequence.status !== "active") {
-      await defer(env, job, "Follow-up sequence is paused or stopped");
+    if (
+      (draft.id.startsWith("sequence-draft:") && !sequence) ||
+      (sequence && !["active", "paused"].includes(sequence.status))
+    ) {
+      // Older releases cleared the link when a reply arrived. A generated
+      // draft without an active association must never become a manual send.
+      await env.DB.prepare(
+        "UPDATE drafts SET status='discarded' WHERE id=? AND org_id=? AND status='queued'",
+      )
+        .bind(draft.id, job.org_id)
+        .run();
+      return;
+    }
+    if (sequence?.status === "paused") {
+      await defer(env, job, "Follow-up sequence is paused");
       return;
     }
     campaign = {
@@ -369,7 +382,7 @@ async function sendJob(env: Env, job: Row, payload: Row) {
       `INSERT INTO send_attempts(id,org_id,job_id,person_id,account_id,status)
      SELECT ?,?,?,p.id,?,'sending' FROM people p WHERE p.id=? AND p.org_id=? AND p.dnc=0 AND p.crm_context=? AND (p.snoozed_until IS NULL OR p.snoozed_until<=?) AND NOT EXISTS(SELECT 1 FROM suppressions s WHERE s.org_id=p.org_id AND s.email=p.email) AND EXISTS(SELECT 1 FROM jobs WHERE id=? AND status='running') AND ${
        payload.draft_id
-         ? "EXISTS(SELECT 1 FROM drafts d WHERE d.id=? AND d.org_id=p.org_id AND d.person_id=p.id AND d.status='queued' AND NOT EXISTS(SELECT 1 FROM crm_enrollments e WHERE e.org_id=p.org_id AND e.draft_id=d.id AND e.status<>'active'))"
+         ? "EXISTS(SELECT 1 FROM drafts d WHERE d.id=? AND d.org_id=p.org_id AND d.person_id=p.id AND d.status='queued' AND (d.id NOT GLOB 'sequence-draft:*' OR EXISTS(SELECT 1 FROM crm_enrollments e WHERE e.org_id=p.org_id AND e.draft_id=d.id AND e.status='active')) AND NOT EXISTS(SELECT 1 FROM crm_enrollments e WHERE e.org_id=p.org_id AND e.draft_id=d.id AND e.status<>'active'))"
          : "EXISTS(SELECT 1 FROM enrollments e JOIN campaigns c ON c.id=e.campaign_id AND c.org_id=e.org_id WHERE e.id=? AND e.org_id=p.org_id AND e.person_id=p.id AND e.status='active' AND e.step=? AND c.status='active')"
      } RETURNING id`,
     ).bind(

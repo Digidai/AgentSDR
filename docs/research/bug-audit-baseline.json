@@ -1,8 +1,8 @@
 {
   "baseline_commit": "fc015a91fb5256858c2fbf58d4547dafc3ae2491",
   "production_runtime_before": "e53318462ac56bf5e836d3d3ec3e6c2182a7d4b2",
-  "audit_tests": 52,
-  "baseline_failed": 28,
+  "audit_tests": 53,
+  "baseline_failed": 29,
   "baseline_passed": 24,
   "failed_scenarios": [
     "cancels queued follow-ups on fresh replies, including paused sequences",
@@ -32,7 +32,8 @@
     "resumes a paused draft-generation job instead of permanently completing it",
     "reconciles a failed local receipt using its frozen content and without reviving a replied sequence",
     "allows only one concurrent reconciliation outcome to commit",
-    "cannot undo old history over a newer classification with the same visible stage"
+    "cannot undo old history over a newer classification with the same visible stage",
+    "blocks legacy queued follow-ups whose stopped sequence already lost its draft link"
   ],
   "environment": "Isolated local Miniflare D1/R2; synthetic identities; mocked provider transports; no production data"
 }
