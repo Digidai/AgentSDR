@@ -1,0 +1,27 @@
+{
+  "host": "https://sdr.genedai.me",
+  "deployed_code_sha": "e53318462ac56bf5e836d3d3ec3e6c2182a7d4b2",
+  "worker_version_id": "0a991800-da75-401a-8e50-be3419ece63d",
+  "deployment_id": "9e7090a4-3bdf-458f-97ab-a6e1b1aea2d5",
+  "deployed_at": "2026-10-20T08:51:49.010776Z",
+  "traffic_percentage": 100,
+  "checked_at": "2026-10-20T08:52:45.462853+00:00",
+  "ci": {
+    "url": "https://github.com/Digidai/AgentSDR/actions/runs/39396361717",
+    "conclusion": "success",
+    "head_sha": "e53318462ac56bf5e836d3d3ec3e6c2182a7d4b2"
+  },
+  "tests": 191,
+  "compiled_workerd_checks": 12,
+  "post_deployment_checks": [
+    "HTTPS health and exact release",
+    "Existing owner remains initialized",
+    "Frontend asset hash matches build",
+    "Unauthenticated integration update rejected"
+  ],
+  "owner_initialized": true,
+  "resend_connection_retested_by_user": false,
+  "real_email_sent": false,
+  "asset": "index-B699OoNa.js",
+  "asset_sha256": "017048d5e1a424f64d252ca7b718b061048464a17a070d9a0c92cf74e33ed0d2"
+}

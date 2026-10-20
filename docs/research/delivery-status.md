@@ -20,11 +20,13 @@ The native APIs are redesigned; legacy Next.js clients are not wire compatible. 
 
 ## Release state
 
-Production is deployed at **https://sdr.genedai.me** from exact pushed code SHA `f16a389a9a425fb9ee17fd73025c88a90ebd3c91`. Worker version `3b3f5776-b187-4adb-a432-256a9f155a01` receives 100% traffic. GitHub Actions [39047228392](https://github.com/Digidai/AgentSDR/actions/runs/39047228392) succeeded on that SHA. Remote additive migration `0002_upstream_parity.sql` applied successfully (78 commands); the pre-migration export remains private and ignored.
+As of **2026-10-20**, production at **https://sdr.genedai.me** runs the provider connection repair from pushed SHA `e53318462ac56bf5e836d3d3ec3e6c2182a7d4b2`. Worker version `0a991800-da75-401a-8e50-be3419ece63d` receives 100% traffic. [CI 39396361717](https://github.com/Digidai/AgentSDR/actions/runs/39396361717) passed 191 tests, builds, audit and 12 compiled workerd checks. Four read-only post-deployment checks confirm the exact release, existing initialized owner, frontend asset hash and authentication boundary. See [repair details](resend-connection-fix.md) and [current receipt](resend-connection-deployment.json). Resend connection success still requires the user's post-deployment retry; no real email was sent by this repair.
+
+The initial parity release used exact code SHA `f16a389a9a425fb9ee17fd73025c88a90ebd3c91`, Worker version `3b3f5776-b187-4adb-a432-256a9f155a01`. GitHub Actions [39047228392](https://github.com/Digidai/AgentSDR/actions/runs/39047228392) succeeded on that SHA. Remote additive migration `0002_upstream_parity.sql` applied successfully (78 commands); the pre-migration export remains private and ignored.
 
 The final live report passed **32 checks**, including exact release SHA, real Workers AI → Queue → D1 draft, no automatic send, 15/84 catalog coverage, real QuickJS/FormulaJS preview and queued execution, immutable CRM version publication, teams, recorder bearer acceptance/rejection, authenticated recorder ZIP, private R2, CSP and all built asset hashes. `/index.html` is a canonical redirect to `/`; the checker compares `/` and strips only the known Cloudflare JSD transform. The recorder ZIP is compared with an authenticated request.
 
-Only the synthetic verification organization/account/data were removed. Owner setup remains available with the original private bootstrap token. `deployment.json` and `live-verification.json` hold current evidence; `history/` preserves the prior `d9c3fa2` deployment proof. A later verification-script/documentation closeout does not change the deployed runtime SHA.
+Only the synthetic verification organization/account/data were removed after that initial release. Owner setup was left available with the original private bootstrap token; the user has since initialized the owner. `deployment.json` and `live-verification.json` retain evidence for the initial parity release; `history/` preserves the prior `d9c3fa2` deployment proof. Later verification-script/documentation closeouts do not change the deployed runtime SHA. Do not rerun the fresh-install live checker on the initialized workspace.
 
 ## Infrastructure
 
