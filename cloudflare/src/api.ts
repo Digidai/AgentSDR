@@ -623,19 +623,32 @@ api.patch("/drafts/:id", async (c) => {
     b = await c.req.json<Row>();
   check(draft.status === "pending", "Only pending drafts can be edited");
   check(text(b.body), "Draft cannot be empty");
-  await c.env.DB.prepare(
-    "UPDATE drafts SET subject=?,body=? WHERE id=? AND org_id=?",
+  const result = await c.env.DB.prepare(
+    "UPDATE drafts SET subject=?,body=? WHERE id=? AND org_id=? AND status='pending'",
   )
     .bind(text(b.subject, 300), text(b.body), draft.id, draft.org_id)
     .run();
+  if (!result.meta.changes)
+    throw new HTTPException(409, {
+      message: "Draft changed; refresh before editing",
+    });
   return c.json({ ok: true });
 });
 api.delete("/drafts/:id", async (c) => {
   const draft = await scoped(c, "drafts", c.req.param("id"));
   check(draft.status === "pending", "This draft is already queued");
-  await c.env.DB.prepare("DELETE FROM drafts WHERE id=? AND org_id=?")
-    .bind(draft.id, draft.org_id)
-    .run();
+  const result = await c.env.DB.batch([
+    c.env.DB.prepare(
+      "UPDATE crm_enrollments SET status='stopped' WHERE org_id=? AND draft_id=? AND status IN ('active','paused') AND EXISTS(SELECT 1 FROM drafts WHERE id=? AND org_id=? AND status='pending')",
+    ).bind(draft.org_id, draft.id, draft.id, draft.org_id),
+    c.env.DB.prepare(
+      "DELETE FROM drafts WHERE id=? AND org_id=? AND status='pending'",
+    ).bind(draft.id, draft.org_id),
+  ]);
+  if (!result[1].meta.changes)
+    throw new HTTPException(409, {
+      message: "Draft changed; refresh before deleting",
+    });
   return c.json({ ok: true });
 });
 api.post("/drafts/:id/send", async (c) => {
@@ -1018,17 +1031,26 @@ api.post("/jobs/:id/retry", async (c) => {
     "Only failed tasks can be retried; inspect uncertain sends in your provider dashboard",
   );
   const payload = json<Row>(job.payload, {});
+  // Requeue the draft only while this exact job is still failed, in the same
+  // transaction as its state transition. A concurrent retry may already have
+  // dispatched it and produced an uncertain provider outcome.
+  const statements = [];
   if (payload.draft_id)
-    await c.env.DB.prepare(
-      "UPDATE drafts SET status='queued' WHERE id=? AND org_id=? AND status='pending'",
-    )
-      .bind(payload.draft_id, job.org_id)
-      .run();
-  await c.env.DB.prepare(
-    "UPDATE jobs SET status='pending',error='',available_at=?,updated_at=? WHERE id=? AND org_id=?",
-  )
-    .bind(now(), now(), job.id, job.org_id)
-    .run();
+    statements.push(
+      c.env.DB.prepare(
+        "UPDATE drafts SET status='queued' WHERE id=? AND org_id=? AND status='pending' AND EXISTS(SELECT 1 FROM jobs WHERE id=? AND org_id=? AND status='failed')",
+      ).bind(payload.draft_id, job.org_id, job.id, job.org_id),
+    );
+  statements.push(
+    c.env.DB.prepare(
+      "UPDATE jobs SET status='pending',error='',available_at=?,updated_at=? WHERE id=? AND org_id=? AND status='failed' RETURNING id",
+    ).bind(now(), now(), job.id, job.org_id),
+  );
+  const result = await c.env.DB.batch(statements);
+  if (!result.at(-1)?.meta.changes)
+    throw new HTTPException(409, {
+      message: "Task changed; refresh before retrying",
+    });
   return c.json({ ok: true });
 });
 api.post("/files", async (c) => {

@@ -693,25 +693,66 @@ export async function importChat(
   remote: Row,
   historyOnly = false,
 ) {
-  const cid = String(remote.chat_id || remote.id || ""),
-    provider = String(
+  if (remote.event && remote.event !== "message_received") return;
+  const cid = String(remote.chat_id || remote.id || "");
+  if (!cid) return;
+  const sender = String(
       remote.sender?.attendee_provider_id ||
         remote.attendee_provider_id ||
-        remote.provider_id ||
+        remote.sender_id ||
         "",
-    );
-  if (!cid) return;
-  let person = await env.DB.prepare(
-    "SELECT * FROM people WHERE org_id=? AND (json_extract(custom,'$.linkedin_provider_id')=? OR REPLACE(REPLACE(REPLACE(phone,' ',''),'-',''),'+','')=?)",
+    ),
+    self = String(remote.account_info?.user_id || ""),
+    isSender =
+      remote.is_sender === true ||
+      remote.is_sender === 1 ||
+      (!!self && sender === self),
+    peers = (Array.isArray(remote.attendees) ? remote.attendees : []).filter(
+      (p: Row) => p.attendee_provider_id && p.attendee_provider_id !== self,
+    ),
+    provider = isSender
+      ? peers.length === 1
+        ? String(peers[0].attendee_provider_id)
+        : ""
+      : sender,
+    group =
+      remote.is_group === true || remote.is_group === 1 || peers.length > 1,
+    phoneDigits =
+      a.channel === "whatsapp"
+        ? provider.split("@")[0].split(":")[0].replace(/^\+/, "")
+        : "";
+  const existing = await env.DB.prepare(
+    "SELECT person_id FROM chats WHERE org_id=? AND account_id=? AND external_id=?",
   )
-    .bind(org, provider, provider.split("@")[0].split(":")[0])
+    .bind(org, a.id, cid)
     .first<Row>();
+  let person =
+    existing?.person_id && !group && (isSender || !provider)
+      ? await env.DB.prepare("SELECT * FROM people WHERE org_id=? AND id=?")
+          .bind(org, existing.person_id)
+          .first<Row>()
+      : null;
   if (!person && provider) {
+    if (a.channel === "linkedin")
+      person = await env.DB.prepare(
+        "SELECT * FROM people WHERE org_id=? AND json_extract(custom,'$.linkedin_provider_id')=?",
+      )
+        .bind(org, provider)
+        .first<Row>();
+    else if (/^\d+$/.test(phoneDigits))
+      person = await env.DB.prepare(
+        "SELECT * FROM people WHERE org_id=? AND REPLACE(REPLACE(REPLACE(phone,' ',''),'-',''),'+','')=?",
+      )
+        .bind(org, phoneDigits)
+        .first<Row>();
+  }
+  if (
+    !person &&
+    provider &&
+    (a.channel === "linkedin" || /^\d+$/.test(phoneDigits))
+  ) {
     const pid = id(),
-      phone =
-        a.channel === "whatsapp"
-          ? "+" + provider.split("@")[0].split(":")[0]
-          : "";
+      phone = a.channel === "whatsapp" ? "+" + phoneDigits : "";
     await env.DB.prepare(
       "INSERT INTO people(id,org_id,name,phone,custom) VALUES(?,?,?,?,?)",
     )
@@ -719,7 +760,7 @@ export async function importChat(
         pid,
         org,
         text(
-          remote.sender?.attendee_name ||
+          (isSender ? peers[0]?.attendee_name : remote.sender?.attendee_name) ||
             remote.name ||
             phone ||
             "LinkedIn contact",
@@ -735,7 +776,7 @@ export async function importChat(
     person = await record(env, org, "people", pid);
   }
   await env.DB.prepare(
-    "INSERT INTO chats(id,org_id,account_id,external_id,person_id,name,metadata) VALUES(?,?,?,?,?,?,?) ON CONFLICT(org_id,account_id,external_id) DO UPDATE SET person_id=COALESCE(excluded.person_id,chats.person_id),metadata=excluded.metadata",
+    "INSERT INTO chats(id,org_id,account_id,external_id,person_id,name,metadata) VALUES(?,?,?,?,?,?,?) ON CONFLICT(org_id,account_id,external_id) DO UPDATE SET person_id=COALESCE(chats.person_id,excluded.person_id),metadata=excluded.metadata",
   )
     .bind(
       id(),
@@ -747,8 +788,12 @@ export async function importChat(
       JSON.stringify(remote),
     )
     .run();
-  if (person && (remote.message || remote.text)) {
-    if (remote.is_sender) {
+  if (
+    person &&
+    (remote.message || remote.text) &&
+    (remote.message_id || remote.id)
+  ) {
+    if (isSender) {
       await env.DB.prepare(
         "INSERT OR IGNORE INTO messages(id,org_id,person_id,channel,direction,body,status,external_id,account_id,thread_id,metadata) VALUES(?,?,?,?,'outbound',?,'sent',?,?,?,?)",
       )
@@ -769,9 +814,10 @@ export async function importChat(
         ...remote,
         person_id: person.id,
         external_id: remote.message_id || remote.id,
-        historyOnly,
+        historyOnly: historyOnly || group,
         crmEligible:
           !historyOnly &&
+          !group &&
           !!(await env.DB.prepare(
             "SELECT id FROM enrollments WHERE org_id=? AND person_id=? LIMIT 1",
           )

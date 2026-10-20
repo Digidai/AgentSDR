@@ -1,0 +1,233 @@
+{
+  "baseline_ref": "0eff221",
+  "native_test_scope": "Four team regression files on isolated tracked baseline sources with fake providers",
+  "total": 56,
+  "passed": 16,
+  "failed": 40,
+  "tests": [
+    {
+      "name": "team review: incoming channel identity and direction does not assign a multi-peer group message with unknown individual recipient/sender to a cached contact (outbound=true)",
+      "status": "passed"
+    },
+    {
+      "name": "team review: incoming channel identity and direction does not assign a multi-peer group message with unknown individual recipient/sender to a cached contact (outbound=false)",
+      "status": "passed"
+    },
+    {
+      "name": "team review: incoming channel identity and direction keeps ordinary incoming messages and duplicate webhook delivery correctly associated",
+      "status": "passed"
+    },
+    {
+      "name": "team review: incoming channel identity and direction resolves a self-sent new direct chat to its sole recipient, not the account owner",
+      "status": "failed"
+    },
+    {
+      "name": "team review: incoming channel identity and direction never associates an unknown peer with the first contact having no phone",
+      "status": "failed"
+    },
+    {
+      "name": "team review: incoming channel identity and direction keeps known chat identity when outbound history has no peer identifier",
+      "status": "failed"
+    },
+    {
+      "name": "team review: incoming channel identity and direction uses the official webhook sender/account identity to recognize self-sent messages",
+      "status": "failed"
+    },
+    {
+      "name": "team review: incoming channel identity and direction does not match a LinkedIn provider id against unrelated phone digits",
+      "status": "failed"
+    },
+    {
+      "name": "team review: incoming channel identity and direction does not treat a message_read event as a fresh customer reply",
+      "status": "failed"
+    },
+    {
+      "name": "team review: incoming channel identity and direction does not treat a message_reaction event as a fresh customer reply",
+      "status": "failed"
+    },
+    {
+      "name": "team review: incoming channel identity and direction does not treat a message_deleted event as a fresh customer reply",
+      "status": "failed"
+    },
+    {
+      "name": "splitting text invalidates cached formulas that consume the replaced output",
+      "status": "failed"
+    },
+    {
+      "name": "split validates the final 150 column limit before changing rows",
+      "status": "failed"
+    },
+    {
+      "name": "skipped recalculations cannot feed a previous successful value into downstream formulas",
+      "status": "failed"
+    },
+    {
+      "name": "rejects two generated columns that claim the same physical output key",
+      "status": "failed"
+    },
+    {
+      "name": "reports invalid formula syntax as a correctable client error",
+      "status": "failed"
+    },
+    {
+      "name": "recorder completion preserves a user's explicit call disposition and follow-up",
+      "status": "failed"
+    },
+    {
+      "name": "a failed recorder start does not leave its contact permanently calling",
+      "status": "failed"
+    },
+    {
+      "name": "saving an unanswered disposition after recorder completion counts that call only once",
+      "status": "failed"
+    },
+    {
+      "name": "editing notes with an unchanged unanswered status preserves its existing attempt count",
+      "status": "failed"
+    },
+    {
+      "name": "a legacy completed unanswered call without a new audit marker is not counted again",
+      "status": "failed"
+    },
+    {
+      "name": "concurrent saves and the next separate call count unanswered calls once each",
+      "status": "passed"
+    },
+    {
+      "name": "cancelling or completing an older call cannot overwrite a newer active call",
+      "status": "passed"
+    },
+    {
+      "name": "cancel preserves a subsequent explicit Do Not Call decision",
+      "status": "passed"
+    },
+    {
+      "name": "a directly logged not-interested result remains final when recorder completion arrives later",
+      "status": "failed"
+    },
+    {
+      "name": "rejects generated output collisions with raw inputs but accepts separate mapped outputs",
+      "status": "failed"
+    },
+    {
+      "name": "split revisions fence a late HTTP result and preserve the newly split input",
+      "status": "failed"
+    },
+    {
+      "name": "channel control: official incoming webhook remains inbound for the explicit peer",
+      "status": "passed"
+    },
+    {
+      "name": "channel control: first self-sent webhook resolves a sole recipient without making a self contact",
+      "status": "failed"
+    },
+    {
+      "name": "channel control: a WhatsApp device-qualified sender matches the phone owner",
+      "status": "passed"
+    },
+    {
+      "name": "a known chat cannot attribute another explicit group sender's message to its cached contact",
+      "status": "passed"
+    },
+    {
+      "name": "cancels an approved reply draft when the lead sends a newer reply before dispatch",
+      "status": "failed"
+    },
+    {
+      "name": "stops the sequence when a user deliberately deletes its generated follow-up",
+      "status": "failed"
+    },
+    {
+      "name": "does not let an overlapping explicit retry reopen a send that became uncertain",
+      "status": "failed"
+    },
+    {
+      "name": "does not change the approved message when an earlier edit completes after approval",
+      "status": "failed"
+    },
+    {
+      "name": "preserves an already-dispatching draft and its receipt when a fresh reply arrives",
+      "status": "passed"
+    },
+    {
+      "name": "allows an ordinary failed draft to be explicitly retried once",
+      "status": "passed"
+    },
+    {
+      "name": "preserves uncertain-send reconciliation when its paused campaign is deleted",
+      "status": "failed"
+    },
+    {
+      "name": "does not accept an existing user's invitation with a password revoked during acceptance",
+      "status": "failed"
+    },
+    {
+      "name": "saves a successful receipt if its campaign is deleted after provider dispatch",
+      "status": "failed"
+    },
+    {
+      "name": "advances a dispatched follow-up receipt while preserving a pause made during delivery",
+      "status": "failed"
+    },
+    {
+      "name": "records a reconciled paused follow-up without resuming or stranding its next step",
+      "status": "failed"
+    },
+    {
+      "name": "invalidates outstanding recovery links when the signed-in user changes their password",
+      "status": "failed"
+    },
+    {
+      "name": "does not accept an invitation revoked while the acceptance request is preparing its transaction",
+      "status": "failed"
+    },
+    {
+      "name": "prevents an administrator from changing a member who became an owner after the initial read",
+      "status": "failed"
+    },
+    {
+      "name": "does not overwrite a completed recovery with a request authenticated by the old password",
+      "status": "failed"
+    },
+    {
+      "name": "does not grant Google signup membership after the invitation is revoked",
+      "status": "failed"
+    },
+    {
+      "name": "keeps valid owner and administrator role changes available",
+      "status": "passed"
+    },
+    {
+      "name": "accepts a valid invitation once and verifies an existing account's password",
+      "status": "passed"
+    },
+    {
+      "name": "retains normal invitation-only Google signup with a verified session",
+      "status": "passed"
+    },
+    {
+      "name": "denies member changes to workspace, team and membership settings",
+      "status": "passed"
+    },
+    {
+      "name": "keeps private file and recording capabilities scoped to their workspace",
+      "status": "passed"
+    },
+    {
+      "name": "rejects stale approval if another operator edits the draft before it is queued",
+      "status": "failed"
+    },
+    {
+      "name": "does not restore a removed workspace member through an overlapping team edit",
+      "status": "failed"
+    },
+    {
+      "name": "does not create a login session from old credentials after password recovery completes",
+      "status": "failed"
+    },
+    {
+      "name": "does not revive a revoked session through an overlapping workspace switch",
+      "status": "failed"
+    }
+  ]
+}

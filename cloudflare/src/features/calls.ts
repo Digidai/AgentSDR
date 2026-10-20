@@ -139,12 +139,18 @@ callFeatures.get("/calls/:id", async (c) =>
   ),
 );
 callFeatures.post("/calls/:id/cancel", async (c) => {
-  await record(c.env, orgId(c), "calls", c.req.param("id"));
-  await c.env.DB.prepare(
-    "UPDATE calls SET status='no_recording',ended_at=?,error='Cancelled by user' WHERE id=? AND org_id=? AND status='pending'",
+  const call = await record(c.env, orgId(c), "calls", c.req.param("id"));
+  const changed = await c.env.DB.prepare(
+    "UPDATE calls SET status='no_recording',ended_at=?,error='Cancelled by user' WHERE id=? AND org_id=? AND status='pending' RETURNING id",
   )
     .bind(now(), c.req.param("id"), orgId(c))
-    .run();
+    .first();
+  if (changed && call.contact_id)
+    await c.env.DB.prepare(
+      "UPDATE call_contacts SET call_status=CASE WHEN stage='follow_up' THEN 'connected' WHEN unanswered_attempts>0 THEN 'no_answer' ELSE 'new' END WHERE id=? AND org_id=? AND call_status='calling' AND NOT EXISTS(SELECT 1 FROM calls newer JOIN calls current ON current.id=? WHERE newer.org_id=current.org_id AND newer.contact_id=current.contact_id AND newer.rowid>current.rowid)",
+    )
+      .bind(call.contact_id, orgId(c), call.id)
+      .run();
   return c.json(
     callSummary(await record(c.env, orgId(c), "calls", c.req.param("id"))),
   );
@@ -162,7 +168,9 @@ callFeatures.patch("/calls/:id", async (c) => {
     .bind(b.disposition, r.id, orgId(c))
     .run();
   if (r.contact_id)
-    await outcome(c.env, orgId(c), r.contact_id, b.disposition, b.followUpAt);
+    await outcome(c.env, orgId(c), r.contact_id, b.disposition, b.followUpAt, {
+      callId: r.id,
+    });
   if (b.disposition === "do_not_call")
     await doNotCall(c.env, orgId(c), r.person_id);
   if (b.disposition === "interested" || b.disposition === "meeting_booked")
@@ -422,6 +430,8 @@ recorderRoutes.post("/call-recorder/calls/:id/finish", async (c) => {
       r.org_id,
       r.contact_id,
       b.outcome === "recorded" ? "connected" : "no_answer",
+      undefined,
+      { callId: r.id, automatic: true },
     );
   return c.json({
     call: callSummary(await record(c.env, r.org_id, "calls", r.id)),
@@ -453,6 +463,7 @@ async function outcome(
   contactId: string,
   value: string,
   follow?: string,
+  source?: { callId: string; automatic?: boolean },
 ) {
   ensure(
     CONTACT_CALL_STATUSES.includes(value as any) ||
@@ -469,14 +480,25 @@ async function outcome(
   let stage = "follow_up",
     attempts = r.unanswered_attempts,
     status = value;
+  const countsAttempt = ["no_answer", "busy"].includes(value),
+    attemptKey = source ? `call-unanswered:${source.callId}` : null,
+    alreadyCounted =
+      (source &&
+        attempts > 0 &&
+        ["no_answer", "busy"].includes(r.call_status)) ||
+      (attemptKey
+        ? await env.DB.prepare("SELECT id FROM events WHERE id=? AND org_id=?")
+            .bind(attemptKey, org)
+            .first()
+        : false);
   let followAt = follow || null;
-  if (["no_answer", "busy"].includes(value)) {
-    attempts++;
+  if (countsAttempt) {
+    if (!alreadyCounted) attempts++;
     const wait = RETRY_AFTER_DAYS[attempts - 1];
     stage = wait ? "to_call" : "done";
-    followAt = wait
-      ? new Date(Date.now() + wait * 86400000).toISOString()
-      : null;
+    followAt =
+      follow ||
+      (wait ? new Date(Date.now() + wait * 86400000).toISOString() : null);
   } else if (
     [
       "wrong_number",
@@ -492,14 +514,44 @@ async function outcome(
       "meeting_booked",
       "callback",
       "send_details",
+      "not_interested",
     ].includes(value)
       ? "connected"
       : r.call_status;
-  await env.DB.prepare(
-    "UPDATE call_contacts SET call_status=?,stage=?,unanswered_attempts=?,follow_up_at=? WHERE id=? AND org_id=?",
-  )
-    .bind(status, stage, attempts, followAt, r.id, org)
-    .run();
+  const gate =
+      "EXISTS(SELECT 1 FROM people p WHERE p.id=call_contacts.person_id AND p.org_id=call_contacts.org_id AND p.dnc=0) AND call_status<>'do_not_call' AND (? IS NULL OR EXISTS(SELECT 1 FROM calls c WHERE c.id=? AND c.org_id=call_contacts.org_id AND c.contact_id=call_contacts.id AND (?=0 OR (call_status='calling' AND c.disposition IS NULL)) AND NOT EXISTS(SELECT 1 FROM calls newer WHERE newer.org_id=c.org_id AND newer.contact_id=c.contact_id AND newer.rowid>c.rowid)))",
+    gateArgs = [
+      source?.callId || null,
+      source?.callId || null,
+      source?.automatic ? 1 : 0,
+    ],
+    statements: D1PreparedStatement[] = [];
+  if (attemptKey && countsAttempt)
+    statements.push(
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO events(id,org_id,type,detail,person_id) SELECT ?,org_id,'call.unanswered',?,person_id FROM call_contacts WHERE id=? AND org_id=? AND ${gate}`,
+      ).bind(
+        attemptKey,
+        JSON.stringify({ call_id: source!.callId }),
+        r.id,
+        org,
+        ...gateArgs,
+      ),
+    );
+  statements.push(
+    env.DB.prepare(
+      `UPDATE call_contacts SET call_status=?,stage=?,unanswered_attempts=${attemptKey && countsAttempt ? "unanswered_attempts+?*changes()" : "?"},follow_up_at=? WHERE id=? AND org_id=? AND ${gate}`,
+    ).bind(
+      status,
+      stage,
+      ...(attemptKey && countsAttempt ? [alreadyCounted ? 0 : 1] : [attempts]),
+      followAt,
+      r.id,
+      org,
+      ...gateArgs,
+    ),
+  );
+  await env.DB.batch(statements);
 }
 callFeatures.get("/calling/campaigns", async (c) => {
   const items = await c.env.DB.prepare(
@@ -580,7 +632,7 @@ callFeatures.post("/calling/campaigns/:id/contacts", async (c) => {
 callFeatures.patch("/calling/contacts/:id", async (c) => {
   const r = await record(c.env, orgId(c), "call_contacts", c.req.param("id")),
     b = await c.req.json<Row>();
-  if (b.callStatus)
+  if (b.callStatus && b.callStatus !== r.call_status)
     await outcome(c.env, orgId(c), r.id, b.callStatus, b.followUpAt);
   await c.env.DB.prepare(
     "UPDATE call_contacts SET notes=?,follow_up_at=COALESCE(?,follow_up_at),stage=COALESCE(?,stage) WHERE id=? AND org_id=?",

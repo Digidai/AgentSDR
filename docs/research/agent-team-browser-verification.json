@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-20",
+  "authorization": "Explicit user approval for local synthetic browser interaction; no real channel or message operations",
+  "target": "http://127.0.0.1:8899",
+  "environment": "Dedicated local Worker with isolated local D1/R2, synthetic owner, fixture AI and provider transports",
+  "real_provider_authorizations": 0,
+  "real_outbound_messages": 0,
+  "real_calls": 0,
+  "production_business_mutations": 0,
+  "checks": [
+    {"name": "Private setup creates synthetic owner and authenticated workspace", "ok": true},
+    {"name": "LinkedIn, WhatsApp and notifications explain missing Unipile configuration", "ok": true},
+    {"name": "Invalid service DSN returns actionable inline validation", "ok": true},
+    {"name": "Fixture Unipile connection saves and missing-configuration guidance clears", "ok": true},
+    {"name": "Notification fixture registration displays success guidance", "ok": true},
+    {"name": "LinkedIn hosted authorization fixture and workspace return", "ok": true},
+    {"name": "WhatsApp hosted authorization fixture and workspace return", "ok": true},
+    {"name": "Synthetic contact creation and detail dialog", "ok": true},
+    {"name": "AI draft count increases without reload or closing contact dialog", "ok": true},
+    {"name": "Formula preview produces FORMULA CONTACT", "ok": true},
+    {"name": "Queued formula run persists FORMULA CONTACT with success and done states", "ok": true},
+    {"name": "Mobile navigation opens and routes to channels", "ok": true},
+    {"name": "390px channel page has document/body scroll widths of 390px", "ok": true}
+  ],
+  "local_screenshot": "output/playwright/agent-team-mobile-channels.png",
+  "limits": "Mock authorization and provider responses do not prove live account permissions, actual delivery or real microphone/phone operation. Expected invalid-input HTTP 400 was exercised."
+}

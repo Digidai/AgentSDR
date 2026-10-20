@@ -639,13 +639,21 @@ crmFeatures.post("/send-attempts/:id/reconcile", async (c) => {
   const job = await record(c.env, org, "jobs", a.job_id),
     payload = json<Row>(job.payload, {});
   const draft = payload.draft_id
-    ? await record(c.env, org, "drafts", payload.draft_id)
+    ? await c.env.DB.prepare("SELECT * FROM drafts WHERE id=? AND org_id=?")
+        .bind(payload.draft_id, org)
+        .first<Row>()
     : null;
   const en = payload.enrollment_id
-    ? await record(c.env, org, "enrollments", payload.enrollment_id)
+    ? await c.env.DB.prepare(
+        "SELECT * FROM enrollments WHERE id=? AND org_id=?",
+      )
+        .bind(payload.enrollment_id, org)
+        .first<Row>()
     : null;
   const campaign = en
-    ? await record(c.env, org, "campaigns", en.campaign_id)
+    ? await c.env.DB.prepare("SELECT * FROM campaigns WHERE id=? AND org_id=?")
+        .bind(en.campaign_id, org)
+        .first<Row>()
     : null;
   const step = campaign
     ? await c.env.DB.prepare(
@@ -664,18 +672,20 @@ crmFeatures.post("/send-attempts/:id/reconcile", async (c) => {
     ensure(channel, "Cannot identify the original send channel");
     statements.push(
       c.env.DB.prepare(
-        `INSERT OR IGNORE INTO messages(id,org_id,person_id,campaign_id,channel,direction,subject,body,status,external_id,account_id,metadata) SELECT ?,?,?,?,?,'outbound',?,?,'sent',?,?,? WHERE ${guard}`,
+        `INSERT OR IGNORE INTO messages(id,org_id,person_id,campaign_id,channel,direction,subject,body,status,external_id,account_id,metadata) SELECT ?,?,?,(SELECT id FROM campaigns WHERE id=? AND org_id=?),?,'outbound',?,?,'sent',?,(SELECT id FROM channel_accounts WHERE id=? AND org_id=?),? WHERE ${guard}`,
       ).bind(
         `receipt:${a.id}`,
         org,
         person.id,
         snapshot?.campaign_id || campaign?.id || null,
+        org,
         channel,
         snapshot?.subject ??
           render(draft?.subject || step?.subject || "", person),
         snapshot?.body ?? render(draft?.body || step?.body || "", person),
         externalId,
         a.account_id,
+        org,
         JSON.stringify({ reconciled: true, reconstructed: true }),
         a.id,
         org,
@@ -690,11 +700,11 @@ crmFeatures.post("/send-attempts/:id/reconcile", async (c) => {
       const advance = await crmDraftAdvance(c.env, org, draft.id, a.id);
       if (advance) statements.push(advance);
     }
-    if (en) {
+    if (en && campaign) {
       const next = await c.env.DB.prepare(
         "SELECT delay_minutes FROM steps WHERE campaign_id=? AND position=?",
       )
-        .bind(campaign!.id, payload.step + 1)
+        .bind(campaign.id, payload.step + 1)
         .first<Row>();
       statements.push(
         c.env.DB.prepare(
@@ -1140,8 +1150,19 @@ crmFeatures.post("/drafts/:id/send", async (c) => {
   // cannot strand a queued draft without a durable job for Cron to publish.
   const result = await c.env.DB.batch([
     c.env.DB.prepare(
-      "UPDATE drafts SET status='queued' WHERE id=? AND org_id=? AND status='pending' AND (id NOT GLOB 'sequence-draft:*' OR EXISTS(SELECT 1 FROM crm_enrollments e WHERE e.org_id=drafts.org_id AND e.draft_id=drafts.id AND e.status='active')) AND NOT EXISTS(SELECT 1 FROM crm_enrollments WHERE org_id=? AND draft_id=? AND status<>'active') AND NOT EXISTS(SELECT 1 FROM jobs WHERE id=? AND status IN ('uncertain','done','running')) AND EXISTS(SELECT 1 FROM people WHERE id=? AND org_id=? AND dnc=0 AND crm_context=?) RETURNING id",
-    ).bind(d.id, orgId(c), orgId(c), d.id, jid, p.id, orgId(c), p.crm_context),
+      "UPDATE drafts SET status='queued' WHERE id=? AND org_id=? AND status='pending' AND subject=? AND body=? AND (id NOT GLOB 'sequence-draft:*' OR EXISTS(SELECT 1 FROM crm_enrollments e WHERE e.org_id=drafts.org_id AND e.draft_id=drafts.id AND e.status='active')) AND NOT EXISTS(SELECT 1 FROM crm_enrollments WHERE org_id=? AND draft_id=? AND status<>'active') AND NOT EXISTS(SELECT 1 FROM jobs WHERE id=? AND status IN ('uncertain','done','running')) AND EXISTS(SELECT 1 FROM people WHERE id=? AND org_id=? AND dnc=0 AND crm_context=?) RETURNING id",
+    ).bind(
+      d.id,
+      orgId(c),
+      d.subject,
+      d.body,
+      orgId(c),
+      d.id,
+      jid,
+      p.id,
+      orgId(c),
+      p.crm_context,
+    ),
     c.env.DB.prepare(
       "INSERT OR IGNORE INTO jobs(id,org_id,kind,payload) SELECT ?,?,'send',? WHERE EXISTS(SELECT 1 FROM drafts WHERE id=? AND org_id=? AND status='queued')",
     ).bind(jid, orgId(c), JSON.stringify(payload), d.id, orgId(c)),
@@ -1170,7 +1191,7 @@ export async function crmDraftAdvance(
   attemptId?: string,
 ) {
   const enrollment = await env.DB.prepare(
-    "SELECT * FROM crm_enrollments WHERE org_id=? AND draft_id=? AND status='active'",
+    "SELECT * FROM crm_enrollments WHERE org_id=? AND draft_id=? AND status IN ('active','paused')",
   )
     .bind(org, draftId)
     .first<Row>();
@@ -1183,9 +1204,9 @@ export async function crmDraftAdvance(
     steps = json<Row[]>(version?.steps, []),
     next = steps[enrollment.step + 1];
   return env.DB.prepare(
-    "UPDATE crm_enrollments SET step=step+1,status=?,draft_id=NULL,next_run=? WHERE id=? AND org_id=? AND draft_id=? AND step=? AND status='active' AND (? IS NULL OR EXISTS(SELECT 1 FROM send_attempts WHERE id=? AND org_id=? AND status='uncertain'))",
+    "UPDATE crm_enrollments SET step=step+1,status=CASE WHEN ?=1 THEN status ELSE 'completed' END,draft_id=NULL,next_run=? WHERE id=? AND org_id=? AND draft_id=? AND step=? AND status IN ('active','paused') AND (? IS NULL OR EXISTS(SELECT 1 FROM send_attempts WHERE id=? AND org_id=? AND status='uncertain'))",
   ).bind(
-    next ? "active" : "completed",
+    next ? 1 : 0,
     next
       ? new Date(
           Date.now() + Number(next.delay_minutes || 0) * 60000,

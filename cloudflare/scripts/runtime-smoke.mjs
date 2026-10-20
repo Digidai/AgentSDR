@@ -109,6 +109,31 @@ try {
   });
   assert(r.status === 201, "WebCrypto auth with real D1");
   cookie = r.headers.get("set-cookie").split(";")[0];
+  const originalCookie = cookie;
+  const passwordChange = await request("/auth/password", "POST", {
+    current: "runtime-fixture-long-password",
+    password: "runtime-updated-long-password",
+  });
+  assert(
+    passwordChange.status === 200,
+    "compiled password change rotates an authenticated session",
+  );
+  cookie = passwordChange.headers.get("set-cookie").split(";")[0];
+  const revoked = await mf.dispatchFetch(origin + "/api/auth/status", {
+    headers: { Cookie: originalCookie },
+  });
+  assert(
+    (await revoked.json()).user === null,
+    "compiled password change revokes the old session",
+  );
+  const oldLogin = await request("/auth/login", "POST", {
+    email: "runtime@example.invalid",
+    password: "runtime-fixture-long-password",
+  });
+  assert(
+    oldLogin.status === 401,
+    "compiled login rejects the superseded password",
+  );
   assert(
     (await api("/accounts")).connections.unipile === false,
     "channel readiness reports missing configuration without exposing credentials",

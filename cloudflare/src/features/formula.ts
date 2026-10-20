@@ -73,7 +73,9 @@ export async function evaluateFormula(
     if (result.error) {
       const error = ctx.dump(result.error);
       result.error.dispose();
-      throw new Error(String(error?.message || error));
+      const message = String(error?.message || error);
+      if (error?.name === "SyntaxError") throw new SyntaxError(message);
+      throw new Error(message);
     }
     const value = syntaxOnly ? true : ctx.dump(result.value);
     result.value.dispose();

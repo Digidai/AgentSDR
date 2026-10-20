@@ -185,6 +185,22 @@ export function orderedColumns(columns: Column[]) {
   for (const c of columns) visit(c);
   return result;
 }
+const derivedColumnTypes = new Set([
+  "ai",
+  "http",
+  "hunter",
+  "apollo",
+  "formula",
+  "enrichment",
+  "ai_output",
+  "integration_output",
+]);
+function inputCells(columns: Column[], cells: Row) {
+  const result = { ...cells };
+  for (const col of columns)
+    if (derivedColumnTypes.has(col.type)) delete result[col.key];
+  return result;
+}
 tableFeatures.patch("/tables/:id", async (c) => {
   const t = await record(
       c.env,
@@ -229,13 +245,20 @@ tableFeatures.patch("/tables/:id", async (c) => {
       ].includes(col.type),
       "Column type is not implemented in this upstream version",
     );
-    if (col.type === "formula")
-      await evaluateFormula(
-        col.config?.expression || col.prompt || "",
-        {},
-        {},
-        true,
-      );
+    if (col.type === "formula") {
+      try {
+        await evaluateFormula(
+          col.config?.expression || col.prompt || "",
+          {},
+          {},
+          true,
+        );
+      } catch (error) {
+        if (error instanceof SyntaxError)
+          ensure(false, `Invalid formula: ${error.message}`);
+        throw error;
+      }
+    }
   }
   // Persist output columns alongside their parent so results are visible/exportable.
   for (const col of [...columns]) {
@@ -257,14 +280,23 @@ tableFeatures.patch("/tables/:id", async (c) => {
         type: "ai_output",
         config: { parentColumnKey: col.key, outputKey: o.key },
       }));
-    for (const output of outputs)
-      if (!columns.some((c) => c.key === output.key)) {
+    for (const output of outputs) {
+      const existing = columns.find((c) => c.key === output.key);
+      ensure(
+        !existing ||
+          (existing.type === output.type &&
+            existing.config?.parentColumnKey === col.key &&
+            existing.config?.outputKey === output.config.outputKey),
+        `Output ${output.key} is already used by another column`,
+      );
+      if (!existing) {
         ensure(
           /^[a-zA-Z][a-zA-Z0-9_]{0,49}$/.test(output.key),
           "Output keys must be valid identifiers of at most 50 characters",
         );
         columns.push(output as Column);
       }
+    }
   }
   ensure(columns.length <= 150, "Outputs exceed the 150 column limit");
   for (const col of columns)
@@ -389,7 +421,10 @@ tableFeatures.patch("/tables/:id/rows/:row", async (c) => {
     b.cells && typeof b.cells === "object" && !Array.isArray(b.cells),
     "Use a cells object",
   );
-  const cells = { ...json<Row>(r.cells, {}), ...b.cells };
+  const cells = inputCells(json<Column[]>(t.columns, []), {
+    ...json<Row>(r.cells, {}),
+    ...b.cells,
+  });
   ensure(JSON.stringify(cells).length < 250000, "Row data is too large");
   await c.env.DB.prepare(
     "UPDATE table_rows SET cells=?,cell_meta='{}',status='ready',revision=revision+1 WHERE id=? AND org_id=?",
@@ -523,29 +558,59 @@ tableFeatures.post("/tables/:id/split", async (c) => {
     )
       .bind(orgId(c), t.id)
       .all<Row>();
-  for (const key of b.outputs)
-    if (!cols.some((c) => c.key === key)) {
-      ensure(/^[a-zA-Z][a-zA-Z0-9_]{0,49}$/.test(key), "Invalid output key");
+  ensure(
+    cols.some((c) => c.key === b.key),
+    "Choose a source column",
+  );
+  ensure(
+    new Set(b.outputs).size === b.outputs.length,
+    "Output keys must be unique",
+  );
+  for (const key of b.outputs) {
+    ensure(
+      typeof key === "string" && /^[a-zA-Z][a-zA-Z0-9_]{0,49}$/.test(key),
+      "Invalid output key",
+    );
+    const existing = cols.find((c) => c.key === key);
+    ensure(
+      !existing || !derivedColumnTypes.has(existing.type),
+      "Split outputs must be input columns",
+    );
+    if (!existing) {
       cols.push({ key, name: key, type: "text" });
     }
-  await batches(
-    c.env,
-    rows.results.map((r) => {
-      const cells = json<Row>(r.cells, {}),
-        parts = String(cells[b.key] || "").split(b.separator);
+  }
+  ensure(cols.length <= 150, "Outputs exceed the 150 column limit");
+  await batches(c.env, [
+    c.env.DB.prepare(
+      "UPDATE jobs SET status='done',error='Table data changed' WHERE org_id=? AND kind='table-row' AND status IN ('pending','queued','running') AND json_extract(payload,'$.table_id')=?",
+    ).bind(orgId(c), t.id),
+    c.env.DB.prepare(
+      "UPDATE cell_runs SET status='cancelled' WHERE org_id=? AND table_id=? AND status IN ('running','processing')",
+    ).bind(orgId(c), t.id),
+    ...rows.results.map((r) => {
+      const original = json<Row>(r.cells, {}),
+        cells = inputCells(cols, original),
+        parts = String(original[b.key] ?? "").split(b.separator);
       b.outputs.forEach(
         (key: string, i: number) => (cells[key] = parts[i] || ""),
       );
       return c.env.DB.prepare(
-        "UPDATE table_rows SET cells=? WHERE id=? AND org_id=?",
+        "UPDATE table_rows SET cells=?,cell_meta='{}',revision=revision+1,status='ready',error='' WHERE id=? AND org_id=?",
       ).bind(JSON.stringify(cells), r.id, orgId(c));
     }),
-  );
+  ]);
   await c.env.DB.prepare(
     "UPDATE enrichment_tables SET columns=? WHERE id=? AND org_id=?",
   )
     .bind(JSON.stringify(cols), t.id, orgId(c))
     .run();
+  if (t.auto_run)
+    for (const row of rows.results)
+      await enqueue(c.env, orgId(c), "table-row", {
+        table_id: t.id,
+        row_id: row.id,
+      });
   return c.json({ ok: true });
 });
 tableFeatures.post("/tables/:id/formula-preview", async (c) => {
@@ -808,6 +873,10 @@ export async function executeTableRow(env: Env, job: Row, payload: Row) {
           await lookupRegistry(env, job.org_id, condition),
         ).catch(() => false))
       ) {
+        delete cells[col.key];
+        for (const output of columns)
+          if (output.config?.parentColumnKey === col.key)
+            delete cells[output.key];
         meta[col.key] = { status: "skipped" };
         continue;
       }

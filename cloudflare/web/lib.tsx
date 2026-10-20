@@ -48,7 +48,7 @@ export function useData(path: string, refresh = 0) {
         });
     void pull();
     const timer =
-      /^\/(?:tables\/|calling\/|calls|crm\/(?:actions|classifications)|jobs|inbox|search\/batches|prospecting)/.test(
+      /^\/(?:people\/[^/]+$|tables\/|calling\/|calls|crm\/(?:actions|classifications)|jobs|inbox|search\/batches|prospecting)/.test(
         path,
       )
         ? setInterval(() => {

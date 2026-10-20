@@ -80,8 +80,8 @@ export async function receive(
       `UPDATE people SET crm_context=crm_context+1 WHERE org_id=? AND id=? AND ?=1 AND ${ownsMessage}`,
     ).bind(org, person.id, fresh, mid),
     env.DB.prepare(
-      `UPDATE drafts SET status='discarded' WHERE org_id=? AND id IN (SELECT draft_id FROM crm_enrollments WHERE org_id=? AND person_id=? AND status IN ('active','paused')) AND status IN ('pending','queued') AND ?=1 AND ${ownsMessage}`,
-    ).bind(org, org, person.id, fresh, mid),
+      `UPDATE drafts SET status='discarded' WHERE org_id=? AND person_id=? AND status IN ('pending','queued') AND NOT EXISTS(SELECT 1 FROM send_attempts a JOIN jobs j ON j.id=a.job_id AND j.org_id=a.org_id WHERE a.org_id=drafts.org_id AND a.person_id=drafts.person_id AND a.status IN ('sending','uncertain') AND json_extract(j.payload,'$.draft_id')=drafts.id) AND ?=1 AND ${ownsMessage}`,
+    ).bind(org, person.id, fresh, mid),
     env.DB.prepare(
       `UPDATE crm_enrollments SET status='stopped' WHERE org_id=? AND person_id=? AND status IN ('active','paused') AND ?=1 AND ${ownsMessage}`,
     ).bind(org, person.id, fresh, mid),

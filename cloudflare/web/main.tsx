@@ -870,7 +870,7 @@ function LeadDetail({
               onClick={() =>
                 void act(
                   () => api("/ai/draft", "POST", { person_id: pid, prompt }),
-                  "AI 草稿任务已提交，请稍后刷新查看",
+                  "AI 草稿任务已提交，完成后会自动显示",
                 )
               }
             >

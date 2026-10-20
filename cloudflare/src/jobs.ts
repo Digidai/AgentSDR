@@ -500,17 +500,19 @@ async function sendJob(env: Env, job: Row, payload: Row) {
   try {
     const statements = [
       env.DB.prepare(
-        "INSERT INTO messages(id,org_id,person_id,campaign_id,channel,direction,subject,body,status,external_id,account_id,thread_id,metadata) VALUES(?,?,?,?,?,'outbound',?,?,'sent',?,?,?,?)",
+        "INSERT INTO messages(id,org_id,person_id,campaign_id,channel,direction,subject,body,status,external_id,account_id,thread_id,metadata) VALUES(?,?,?,(SELECT id FROM campaigns WHERE id=? AND org_id=?),?,'outbound',?,?,'sent',?,(SELECT id FROM channel_accounts WHERE id=? AND org_id=?),?,?)",
       ).bind(
         `receipt:${attemptId}`,
         job.org_id,
         person.id,
         campaign.id,
+        job.org_id,
         campaign.channel,
         delivered.subject,
         delivered.body,
         delivered.externalId,
         nativeAccount?.id || null,
+        job.org_id,
         delivered.threadId || null,
         JSON.stringify(delivered.metadata || {}),
       ),

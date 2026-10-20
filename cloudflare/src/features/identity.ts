@@ -12,7 +12,13 @@ import {
   text,
   token,
 } from "../core";
-import { identity, limit, requireAdmin, session } from "../auth";
+import {
+  acceptInvitation,
+  identity,
+  limit,
+  requireAdmin,
+  session,
+} from "../auth";
 import { integration, requestJson } from "../providers";
 import { base64url, decodeBase64url } from "./google";
 import { ensure, orgId, record } from "./shared";
@@ -275,23 +281,11 @@ publicIdentity.get("/auth/callback/google", async (c) => {
       .first<Row>();
     ensure(invite, "This workspace is invitation only", 403);
     const uid = id();
-    await c.env.DB.batch([
-      c.env.DB.prepare(
-        "INSERT INTO users(id,email,name,password_hash,email_verified) VALUES(?,?,?,?,1)",
-      ).bind(
-        uid,
-        email,
-        text(claims.name, 100) || email,
-        await hashPassword(token()),
-      ),
-      c.env.DB.prepare(
-        "INSERT INTO members(org_id,user_id,role) VALUES(?,?,?)",
-      ).bind(invite.org_id, uid, invite.role),
-      c.env.DB.prepare("UPDATE invitations SET used_at=? WHERE id=?").bind(
-        now(),
-        invite.id,
-      ),
-    ]);
+    await acceptInvitation(c.env, invite, uid, {
+      name: text(claims.name, 100) || email,
+      passwordHash: await hashPassword(token()),
+      emailVerified: true,
+    });
     user = { id: uid, org_id: invite.org_id };
   }
   await session(c, user);
@@ -345,11 +339,12 @@ identityFeatures.post("/organizations/:id/switch", async (c) => {
     .first();
   ensure(member, "Workspace not found", 404);
   const existing = getCookie(c, "sdr_session");
-  if (existing)
-    await c.env.DB.prepare("DELETE FROM sessions WHERE token_hash=?")
-      .bind(await digest(existing))
-      .run();
-  await session(c, { ...c.get("user"), org_id: c.req.param("id") });
+  ensure(existing, "Please sign in again", 403);
+  await session(
+    c,
+    { ...c.get("user"), org_id: c.req.param("id") },
+    { sourceSessionHash: await digest(existing) },
+  );
   return c.json({ ok: true });
 });
 identityFeatures.patch("/organizations/:id", async (c) => {
@@ -420,8 +415,8 @@ identityFeatures.patch("/teams/:id", async (c) => {
       ),
       ...b.members.map((uid: string) =>
         c.env.DB.prepare(
-          "INSERT INTO team_members(team_id,user_id) VALUES(?,?)",
-        ).bind(team.id, uid),
+          "INSERT INTO team_members(team_id,user_id) SELECT ?,user_id FROM members WHERE org_id=? AND user_id=?",
+        ).bind(team.id, orgId(c), uid),
       ),
     ]);
   }
@@ -454,11 +449,24 @@ identityFeatures.patch("/members/:id", async (c) => {
   // Keep the owner invariant in the same SQLite statement as the mutation.
   // Checking COUNT before UPDATE lets two concurrent demotions remove both.
   const updated = await c.env.DB.prepare(
-    "UPDATE members SET role=? WHERE org_id=? AND user_id=? AND (role<>'owner' OR ?='owner' OR (SELECT COUNT(*) FROM members WHERE org_id=? AND role='owner')>1) RETURNING user_id",
+    "UPDATE members SET role=? WHERE org_id=? AND user_id=? AND (role<>'owner' OR ?='owner') AND (role<>'owner' OR ?='owner' OR (SELECT COUNT(*) FROM members WHERE org_id=? AND role='owner')>1) RETURNING user_id",
   )
-    .bind(b.role, orgId(c), c.req.param("id"), b.role, orgId(c))
+    .bind(
+      b.role,
+      orgId(c),
+      c.req.param("id"),
+      c.get("user").role,
+      b.role,
+      orgId(c),
+    )
     .first();
-  ensure(updated, "Keep at least one workspace owner");
+  ensure(
+    updated,
+    c.get("user").role === "owner"
+      ? "Keep at least one workspace owner"
+      : "Only owners can manage owners",
+    c.get("user").role === "owner" ? 400 : 403,
+  );
   return c.json({ ok: true });
 });
 identityFeatures.get("/invitations", async (c) => {

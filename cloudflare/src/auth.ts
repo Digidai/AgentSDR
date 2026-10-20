@@ -49,18 +49,50 @@ export function requireAdmin(c: Ctx) {
       message: "An administrator account is required",
     });
 }
-export async function session(c: Ctx, user: Identity | Row) {
-  const raw = token();
-  await c.env.DB.prepare(
-    "INSERT INTO sessions(token_hash,user_id,org_id,expires_at) VALUES(?,?,?,?)",
-  )
-    .bind(
-      await digest(raw),
-      user.id,
-      user.org_id,
-      new Date(Date.now() + 7 * 86400000).toISOString(),
-    )
-    .run();
+export async function session(
+  c: Ctx,
+  user: Identity | Row,
+  authentication: { passwordHash?: string; sourceSessionHash?: string } = {},
+) {
+  const raw = token(),
+    tokenHash = await digest(raw);
+  const conditions = [
+    "EXISTS(SELECT 1 FROM members WHERE user_id=? AND org_id=?)",
+  ];
+  const args = [user.id, user.org_id];
+  if (authentication.passwordHash) {
+    conditions.push(
+      "EXISTS(SELECT 1 FROM users WHERE id=? AND password_hash=?)",
+    );
+    args.push(user.id, authentication.passwordHash);
+  }
+  if (authentication.sourceSessionHash) {
+    conditions.push(
+      "EXISTS(SELECT 1 FROM sessions WHERE token_hash=? AND user_id=? AND expires_at>?)",
+    );
+    args.push(authentication.sourceSessionHash, user.id, now());
+  }
+  const statement = c.env.DB.prepare(
+    `INSERT INTO sessions(token_hash,user_id,org_id,expires_at) SELECT ?,?,?,? WHERE ${conditions.join(" AND ")}`,
+  ).bind(
+    tokenHash,
+    user.id,
+    user.org_id,
+    new Date(Date.now() + 7 * 86400000).toISOString(),
+    ...args,
+  );
+  const result = authentication.sourceSessionHash
+    ? (
+        await c.env.DB.batch([
+          statement,
+          c.env.DB.prepare(
+            "DELETE FROM sessions WHERE token_hash=? AND EXISTS(SELECT 1 FROM sessions WHERE token_hash=?)",
+          ).bind(authentication.sourceSessionHash, tokenHash),
+        ])
+      )[0]
+    : await statement.run();
+  if (!result.meta.changes)
+    throw new HTTPException(401, { message: "Please sign in again" });
   setCookie(c, "sdr_session", raw, {
     httpOnly: true,
     secure: new URL(c.req.url).protocol === "https:",
@@ -68,6 +100,67 @@ export async function session(c: Ctx, user: Identity | Row) {
     path: "/",
     maxAge: 7 * 86400,
   });
+}
+export async function acceptInvitation(
+  env: Env,
+  invitation: Row,
+  uid: string,
+  newUser?: { name: string; passwordHash: string; emailVerified?: boolean },
+  expectedPasswordHash?: string,
+) {
+  const at = now();
+  const credentials = expectedPasswordHash
+    ? " AND EXISTS(SELECT 1 FROM users WHERE id=? AND password_hash=?)"
+    : "";
+  const credentialArgs = expectedPasswordHash
+    ? [uid, expectedPasswordHash]
+    : [];
+  const available =
+    "EXISTS(SELECT 1 FROM invitations WHERE id=? AND token_hash=? AND used_at IS NULL AND expires_at>?)" +
+    credentials;
+  const claim = [invitation.id, invitation.token_hash, at, ...credentialArgs];
+  const statements: D1PreparedStatement[] = [];
+  // D1 batches are atomic. Recheck the invitation inside every grant statement,
+  // then consume it in the same batch so a revoked or competing claim grants nothing.
+  if (newUser)
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO users(id,email,name,password_hash,email_verified) SELECT ?,?,?,?,? WHERE ${available}`,
+      ).bind(
+        uid,
+        invitation.email,
+        newUser.name,
+        newUser.passwordHash,
+        newUser.emailVerified ? 1 : 0,
+        ...claim,
+      ),
+    );
+  statements.push(
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO members(org_id,user_id,role) SELECT ?,?,? WHERE ${available}`,
+    ).bind(invitation.org_id, uid, invitation.role, ...claim),
+    env.DB.prepare(
+      "UPDATE invitations SET used_at=? WHERE id=? AND token_hash=? AND used_at IS NULL AND expires_at>?" +
+        credentials,
+    ).bind(at, ...claim),
+  );
+  const result = await env.DB.batch(statements);
+  if (!result[result.length - 1].meta.changes) {
+    if (
+      expectedPasswordHash &&
+      !(await env.DB.prepare(
+        "SELECT id FROM users WHERE id=? AND password_hash=?",
+      )
+        .bind(uid, expectedPasswordHash)
+        .first())
+    )
+      throw new HTTPException(401, {
+        message: "Use your existing account password",
+      });
+    throw new HTTPException(400, {
+      message: "This invitation is invalid or has expired",
+    });
+  }
 }
 function validCredentials(body: Row) {
   if (
@@ -150,7 +243,7 @@ authRoutes.post("/login", async (c) => {
   );
   if (!user || !valid)
     throw new HTTPException(401, { message: "Email or password is incorrect" });
-  await session(c, user);
+  await session(c, user, { passwordHash: user.password_hash });
   return c.json({ ok: true });
 });
 authRoutes.post("/logout", async (c) => {
@@ -175,16 +268,21 @@ authRoutes.post("/password", requireUser, async (c) => {
     !(await verifyPassword(String(b.current || ""), user.password_hash))
   )
     throw new HTTPException(400, { message: "Current password is incorrect" });
-  await c.env.DB.batch([
-    c.env.DB.prepare("UPDATE users SET password_hash=? WHERE id=?").bind(
-      await hashPassword(b.password),
-      c.get("user").id,
-    ),
-    c.env.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(
-      c.get("user").id,
-    ),
+  const password = await hashPassword(b.password);
+  const result = await c.env.DB.batch([
+    c.env.DB.prepare(
+      "UPDATE users SET password_hash=? WHERE id=? AND password_hash=?",
+    ).bind(password, c.get("user").id, user.password_hash),
+    c.env.DB.prepare(
+      "DELETE FROM sessions WHERE user_id=? AND EXISTS(SELECT 1 FROM users WHERE id=? AND password_hash=?)",
+    ).bind(c.get("user").id, c.get("user").id, password),
+    c.env.DB.prepare(
+      "UPDATE auth_tokens SET used_at=? WHERE user_id=? AND kind='reset' AND used_at IS NULL AND EXISTS(SELECT 1 FROM users WHERE id=? AND password_hash=?)",
+    ).bind(now(), c.get("user").id, c.get("user").id, password),
   ]);
-  await session(c, c.get("user"));
+  if (!result[0].meta.changes)
+    throw new HTTPException(400, { message: "Current password is incorrect" });
+  await session(c, c.get("user"), { passwordHash: password });
   return c.json({ ok: true });
 });
 authRoutes.post("/invitation", async (c) => {
@@ -211,29 +309,20 @@ authRoutes.post("/invitation", async (c) => {
     throw new HTTPException(401, {
       message: "Use your existing account password",
     });
-  const uid = user?.id || id();
-  const statements = [
-    c.env.DB.prepare(
-      "UPDATE invitations SET used_at=? WHERE id=? AND used_at IS NULL RETURNING id",
-    ).bind(now(), invitation.id),
-  ];
-  if (!user)
-    statements.push(
-      c.env.DB.prepare(
-        "INSERT INTO users(id,email,name,password_hash) VALUES(?,?,?,?)",
-      ).bind(
-        uid,
-        invitation.email,
-        text(b.name, 100) || invitation.email,
-        await hashPassword(b.password),
-      ),
-    );
-  statements.push(
-    c.env.DB.prepare(
-      "INSERT OR IGNORE INTO members(org_id,user_id,role) VALUES(?,?,?)",
-    ).bind(invitation.org_id, uid, invitation.role),
+  const uid = user?.id || id(),
+    passwordHash = user?.password_hash || (await hashPassword(b.password));
+  await acceptInvitation(
+    c.env,
+    invitation,
+    uid,
+    user
+      ? undefined
+      : {
+          name: text(b.name, 100) || invitation.email,
+          passwordHash,
+        },
+    user?.password_hash,
   );
-  await c.env.DB.batch(statements);
-  await session(c, { id: uid, org_id: invitation.org_id });
+  await session(c, { id: uid, org_id: invitation.org_id }, { passwordHash });
   return c.json({ ok: true });
 });
