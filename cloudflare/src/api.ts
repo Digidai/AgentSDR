@@ -21,7 +21,7 @@ import {
   token,
 } from "./core";
 import { enqueue, event } from "./jobs";
-import { integration, validateIntegration } from "./providers";
+import { integration, ProviderError, validateIntegration } from "./providers";
 
 export const app = new Hono<AppEnv>();
 app.use("*", async (c, next) => {
@@ -73,6 +73,8 @@ app.use(
 app.onError((error, c) => {
   if (error instanceof HTTPException)
     return c.json({ error: error.message }, error.status);
+  if (error instanceof ProviderError)
+    return c.json({ error: error.message }, error.status === 429 ? 429 : 502);
   console.error(
     "API failure",
     error.name,

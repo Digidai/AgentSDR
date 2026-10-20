@@ -323,15 +323,36 @@ export function Channels(p: Props) {
     [tab, setTab] = useState("accounts"),
     [channel, setChannel] = useState("email"),
     [connect, setConnect] = useState(""),
-    [urls, setUrls] = useState<Row | null>(null);
+    [notifications, setNotifications] = useState<Row | null>(null);
   const run = useMutation(p);
+  const unipileReady = !!data?.connections?.unipile;
+  const callback = new URLSearchParams(location.search).get("connected");
+  const connectChannel = (channel: string, account_id?: string) => {
+    if (!unipileReady) {
+      setConnect("unipile");
+      return;
+    }
+    void p.act(async () => {
+      const result = await api("/accounts/hosted-auth", "POST", {
+        channel,
+        ...(account_id ? { account_id } : {}),
+      });
+      location.assign(result.url);
+    });
+  };
   return (
     <>
       <Title
         title="让每个账号，按你的节奏工作。"
         body="邮箱、LinkedIn 与 WhatsApp 的连接、签名、工作时间和发送规则。"
       >
-        <button className="button" onClick={() => void run("/accounts/sync")}>
+        <button
+          className="button"
+          disabled={!data}
+          onClick={() =>
+            unipileReady ? void run("/accounts/sync") : setConnect("unipile")
+          }
+        >
           <RefreshCw size={16} />
           同步账号
         </button>
@@ -349,10 +370,43 @@ export function Channels(p: Props) {
       {error && <p role="alert">{error}</p>}
       {tab === "accounts" ? (
         <>
+          {data && !unipileReady && (
+            <div className="notice">
+              <div>
+                <strong>先配置 LinkedIn 与 WhatsApp 的连接服务</strong>
+                <p>
+                  这两个渠道通过 Unipile 授权连接。填写服务地址和 API Key
+                  后，即可继续登录 LinkedIn、扫描 WhatsApp
+                  二维码并启用消息通知。
+                </p>
+                <button
+                  className="button"
+                  onClick={() => setConnect("unipile")}
+                >
+                  配置渠道服务
+                </button>
+              </div>
+            </div>
+          )}
+          {callback === "1" && (
+            <div className="notice">
+              已从授权页面返回。请点击「同步账号」更新连接结果。
+            </div>
+          )}
+          {callback === "0" && (
+            <p className="form-error">
+              渠道授权未完成，请重新点击对应的连接按钮。
+            </p>
+          )}
           <div className="toolbar">
             <button
               className="button primary"
-              onClick={() => setConnect("mailbox")}
+              disabled={!data}
+              onClick={() =>
+                setConnect(
+                  data?.connections?.google_workspace ? "mailbox" : "workspace",
+                )
+              }
             >
               <Plus size={16} />
               连接邮箱
@@ -361,14 +415,8 @@ export function Channels(p: Props) {
               <button
                 className="button"
                 key={c}
-                onClick={() =>
-                  void p.act(async () => {
-                    const r = await api("/accounts/hosted-auth", "POST", {
-                      channel: c,
-                    });
-                    location.assign(r.url);
-                  })
-                }
+                disabled={!data}
+                onClick={() => connectChannel(c)}
               >
                 连接 {channelNames[c]}
               </button>
@@ -376,13 +424,23 @@ export function Channels(p: Props) {
             <button className="button" onClick={() => setConnect("workspace")}>
               Google Workspace 配置
             </button>
+            <button className="button" onClick={() => setConnect("unipile")}>
+              渠道服务配置
+            </button>
             <button
               className="button"
-              onClick={() =>
+              disabled={!data}
+              onClick={() => {
+                if (!unipileReady) {
+                  setConnect("unipile");
+                  return;
+                }
                 void p.act(async () =>
-                  setUrls(await api("/channel-webhooks/register", "POST", {})),
-                )
-              }
+                  setNotifications(
+                    await api("/channel-webhooks/register", "POST", {}),
+                  ),
+                );
+              }}
             >
               注册消息通知
             </button>
@@ -419,18 +477,7 @@ export function Channels(p: Props) {
                   {r.channel !== "email" && (
                     <button
                       className="text-button"
-                      onClick={() =>
-                        void p.act(async () =>
-                          location.assign(
-                            (
-                              await api("/accounts/hosted-auth", "POST", {
-                                channel: r.channel,
-                                account_id: r.id,
-                              })
-                            ).url,
-                          ),
-                        )
-                      }
+                      onClick={() => connectChannel(r.channel, r.id)}
                     >
                       重连
                     </button>
@@ -539,7 +586,51 @@ export function Channels(p: Props) {
           </button>
         </Dialog>
       )}
-      {connect && (
+      {connect === "unipile" && (
+        <Dialog
+          title="配置 LinkedIn 与 WhatsApp 连接服务"
+          onClose={() => setConnect("")}
+        >
+          <p className="muted">
+            填写你自己的 Unipile
+            连接信息。保存后，点击对应渠道继续账号授权；验证配置不会发送消息。
+          </p>
+          <Form
+            fields={[
+              {
+                key: "base_url",
+                label: "Unipile 服务地址",
+                required: true,
+                hint: "使用控制台提供的完整地址，包含端口，例如 https://apiXX.unipile.com:XXXXX",
+              },
+              {
+                key: "api_key",
+                label: "Unipile API Key",
+                type: "password",
+                required: true,
+              },
+            ]}
+            label="验证并保存"
+            submit={async (body) => {
+              await api("/integrations/unipile", "POST", body);
+              p.reload();
+              setConnect("");
+            }}
+          />
+          <p className="muted">
+            还没有连接信息？请先在{" "}
+            <a
+              href="https://developer.unipile.com/docs/getting-started"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Unipile 控制台获取服务地址和 API Key
+            </a>
+            。密钥会加密保存。
+          </p>
+        </Dialog>
+      )}
+      {connect && connect !== "unipile" && (
         <Dialog
           title={
             connect === "mailbox" ? "添加工作邮箱" : "Google Workspace 连接"
@@ -601,10 +692,18 @@ export function Channels(p: Props) {
           )}
         </Dialog>
       )}
-      {urls && (
-        <Dialog title="消息通知地址" onClose={() => setUrls(null)}>
-          <pre className="code-block">{JSON.stringify(urls, null, 2)}</pre>
-          <p>这些地址含私有凭据，请只填写到对应服务的通知设置。</p>
+      {notifications && (
+        <Dialog title="消息通知已启用" onClose={() => setNotifications(null)}>
+          <p>
+            已为 Unipile
+            注册新消息、联系人连接和账号状态通知。渠道账号授权完成后，新的消息会同步到「统一收件箱」。
+          </p>
+          <button
+            className="button primary"
+            onClick={() => setNotifications(null)}
+          >
+            知道了
+          </button>
         </Dialog>
       )}
     </>

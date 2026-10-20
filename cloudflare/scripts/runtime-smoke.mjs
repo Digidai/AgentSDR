@@ -109,6 +109,34 @@ try {
   });
   assert(r.status === 201, "WebCrypto auth with real D1");
   cookie = r.headers.get("set-cookie").split(";")[0];
+  assert(
+    (await api("/accounts")).connections.unipile === false,
+    "channel readiness reports missing configuration without exposing credentials",
+  );
+  const missingLinkedin = await request("/accounts/hosted-auth", "POST", {
+    channel: "linkedin",
+  });
+  const missingWhatsapp = await request("/accounts/hosted-auth", "POST", {
+    channel: "whatsapp",
+  });
+  assert(
+    missingLinkedin.status === 400 &&
+      missingWhatsapp.status === 400 &&
+      (await missingLinkedin.json()).error.includes("Unipile"),
+    "compiled channel authorization explains missing setup instead of crashing",
+  );
+  const missingNotifications = await request(
+    "/channel-webhooks/register",
+    "POST",
+    {},
+  );
+  assert(
+    missingNotifications.status === 400 &&
+      !(await db
+        .prepare("SELECT kind FROM integrations WHERE kind='webhook'")
+        .first()),
+    "notification setup does not write credentials before provider configuration",
+  );
   const table = await api("/tables", "POST", { name: "Wasm runtime" });
   const value = await api(`/tables/${table.id}/formula-preview`, "POST", {
     expression: '_.startCase({{name}})+":"+SUM([2,3])',

@@ -71,9 +71,23 @@ export async function requestJson(
   return result;
 }
 export function unipileBase(config: Row) {
-  const url = publicUrl(config.base_url);
-  if (!url.hostname.endsWith(".unipile.com"))
-    throw new Error("Unipile address must end with .unipile.com");
+  let url: URL;
+  try {
+    url = new URL(String(config.base_url || "").trim());
+  } catch {
+    throw new Error(
+      "请填写 Unipile 控制台提供的 HTTPS 服务地址（可包含端口）。",
+    );
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    !url.hostname.endsWith(".unipile.com")
+  )
+    throw new Error(
+      "Unipile 服务地址必须使用 HTTPS 且域名以 .unipile.com 结尾，不能包含用户名或密码。",
+    );
   return url.origin;
 }
 export async function validateIntegration(kind: string, config: Row) {
@@ -110,6 +124,9 @@ export async function validateIntegration(kind: string, config: Row) {
       headers: { Authorization: `Bearer ${config.api_key}` },
     });
   } else if (kind === "unipile") {
+    config.api_key = String(config.api_key || "").trim();
+    if (!config.api_key) throw new Error("请填写 Unipile API Key。");
+    config.base_url = unipileBase(config);
     await requestJson(`${unipileBase(config)}/api/v1/accounts`, {
       headers: { "X-API-KEY": config.api_key },
     });

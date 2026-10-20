@@ -13,7 +13,12 @@ import {
   render,
 } from "../core";
 import { requireAdmin } from "../auth";
-import { integration, requestJson, unipileBase } from "../providers";
+import {
+  integration,
+  ProviderError,
+  requestJson,
+  unipileBase,
+} from "../providers";
 import { enqueue } from "../jobs";
 import { receive } from "../inbound";
 import {
@@ -250,6 +255,14 @@ export function withinHours(hours: Row | null | undefined, date = new Date()) {
     (hours.days.includes((day + 6) % 7) && minute < end)
   );
 }
+async function requireUnipile(env: Env, org: string) {
+  const cfg = await integration(env, org, "unipile");
+  ensure(
+    cfg && cfg.api_key && cfg.base_url,
+    "请先在「渠道账号 → 配置渠道服务」填写 Unipile 服务地址和 API Key，再连接 LinkedIn、WhatsApp 或注册消息通知。",
+  );
+  return cfg;
+}
 export async function unipile(
   env: Env,
   org: string,
@@ -257,20 +270,37 @@ export async function unipile(
   method = "GET",
   body?: unknown,
 ) {
-  const cfg = await integration(env, org, "unipile");
-  ensure(cfg, "Connect Unipile first");
-  return requestJson(
-    `${unipileBase(cfg)}/api/v1/${path}`,
-    {
-      method,
-      headers: {
-        "X-API-KEY": cfg.api_key,
-        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+  const cfg = await requireUnipile(env, org);
+  try {
+    return await requestJson(
+      `${unipileBase(cfg)}/api/v1/${path}`,
+      {
+        method,
+        headers: {
+          "X-API-KEY": cfg.api_key,
+          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    },
-    !["GET", "HEAD"].includes(method),
-  );
+      !["GET", "HEAD"].includes(method),
+    );
+  } catch (error) {
+    if (!(error instanceof ProviderError)) throw error;
+    const message =
+      error.status === 401 || error.status === 403
+        ? `Unipile 连接验证失败（HTTP ${error.status}）。请检查服务地址、API Key 和账号权限。`
+        : error.status === 429
+          ? "Unipile 请求过于频繁（HTTP 429），请稍后重试。"
+          : error.status
+            ? `Unipile 暂时无法完成请求（HTTP ${error.status}），请检查服务后台。`
+            : "暂时无法连接 Unipile，请检查服务地址和服务状态。";
+    throw new ProviderError(
+      message +
+        (error.uncertain ? " 请先查看服务后台的执行记录，再重试。" : ""),
+      error.uncertain,
+      error.status,
+    );
+  }
 }
 channelFeatures.get("/channel-rules/:channel", async (c) => {
   const channel = c.req.param("channel");
@@ -294,13 +324,24 @@ channelFeatures.put("/channel-rules/:channel", async (c) => {
   return c.json({ ok: true });
 });
 channelFeatures.get("/accounts", async (c) => {
-  const items = await c.env.DB.prepare(
-    "SELECT * FROM channel_accounts WHERE org_id=? ORDER BY channel,is_default DESC,name",
-  )
-    .bind(orgId(c))
-    .all<Row>();
+  const [items, providers] = await c.env.DB.batch<Row>([
+    c.env.DB.prepare(
+      "SELECT * FROM channel_accounts WHERE org_id=? ORDER BY channel,is_default DESC,name",
+    ).bind(orgId(c)),
+    c.env.DB.prepare(
+      "SELECT kind FROM integrations WHERE org_id=? AND kind IN ('unipile','google-workspace')",
+    ).bind(orgId(c)),
+  ]);
   for (const a of items.results) a.settings = json(a.settings, {});
-  return c.json({ items: items.results });
+  return c.json({
+    items: items.results,
+    connections: {
+      unipile: providers.results.some((r) => r.kind === "unipile"),
+      google_workspace: providers.results.some(
+        (r) => r.kind === "google-workspace",
+      ),
+    },
+  });
 });
 channelFeatures.post("/mailboxes", async (c) => {
   requireAdmin(c);
@@ -518,8 +559,20 @@ channelFeatures.post("/accounts/:id/sync", async (c) => {
 channelFeatures.post("/accounts/hosted-auth", async (c) => {
   requireAdmin(c);
   const b = await c.req.json<Row>();
-  if (b.account_id)
-    await record(c.env, orgId(c), "channel_accounts", b.account_id);
+  ensure(
+    ["linkedin", "whatsapp"].includes(b.channel),
+    "请选择 LinkedIn 或 WhatsApp。",
+  );
+  const cfg = await requireUnipile(c.env, orgId(c));
+  if (b.account_id) {
+    const account = await record(
+      c.env,
+      orgId(c),
+      "channel_accounts",
+      b.account_id,
+    );
+    ensure(account.channel === b.channel, "重连账号与所选渠道不一致。");
+  }
   const result = await unipile(
     c.env,
     orgId(c),
@@ -528,10 +581,10 @@ channelFeatures.post("/accounts/hosted-auth", async (c) => {
     {
       type: b.account_id ? "reconnect" : "create",
       providers: [b.channel === "whatsapp" ? "WHATSAPP" : "LINKEDIN"],
-      api_url: unipileBase((await integration(c.env, orgId(c), "unipile"))!),
+      api_url: unipileBase(cfg),
       expiresOn: new Date(Date.now() + 30 * 60000).toISOString(),
-      success_redirect_url: `${c.env.APP_URL}/settings?connected=1`,
-      failure_redirect_url: `${c.env.APP_URL}/settings?connected=0`,
+      success_redirect_url: `${c.env.APP_URL}/channels?connected=1`,
+      failure_redirect_url: `${c.env.APP_URL}/channels?connected=0`,
       ...(b.account_id
         ? {
             reconnect_account: (
@@ -541,10 +594,25 @@ channelFeatures.post("/accounts/hosted-auth", async (c) => {
         : {}),
     },
   );
+  let hostedUrl: URL;
+  try {
+    hostedUrl = new URL(String(result.url || ""));
+  } catch {
+    ensure(false, "Unipile 没有返回有效的授权链接，请检查渠道服务配置。");
+  }
+  ensure(
+    hostedUrl.protocol === "https:" &&
+      !hostedUrl.username &&
+      !hostedUrl.password &&
+      hostedUrl.hostname.endsWith(".unipile.com"),
+    "Unipile 返回的授权链接无效，请检查渠道服务配置。",
+  );
   return c.json({ url: result.url });
 });
 channelFeatures.post("/channel-webhooks/register", async (c) => {
   requireAdmin(c);
+  await requireUnipile(c.env, orgId(c));
+  const existing = await unipile(c.env, orgId(c), "webhooks");
   let cfg = await integration(c.env, orgId(c), "webhook");
   if (!cfg) {
     cfg = { secret: token() };
@@ -559,7 +627,6 @@ channelFeatures.post("/channel-webhooks/register", async (c) => {
       )
       .run();
   }
-  const existing = await unipile(c.env, orgId(c), "webhooks");
   for (const source of ["messaging", "users", "account_status"]) {
     const url = `${c.env.APP_URL}/api/channel-webhooks/${orgId(c)}/${source}`;
     if (!(existing.items || []).some((x: Row) => x.request_url === url))
