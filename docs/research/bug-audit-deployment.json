@@ -1,0 +1,32 @@
+{
+  "host": "https://sdr.genedai.me",
+  "deployed_code_sha": "2ae5f470c6b0ccde91c118a6d3a0b93d3f624c43",
+  "worker_version_id": "7c33560f-0249-4c85-9156-c0cb28e418a9",
+  "deployment_id": "da46f87d-9931-4ce0-a058-70390b942d2e",
+  "deployed_at": "2026-10-20T11:20:10.114118Z",
+  "traffic_percentage": 100,
+  "checked_at": "2026-10-20T11:20:54.028953+00:00",
+  "ci": {
+    "conclusion": "success",
+    "headSha": "2ae5f470c6b0ccde91c118a6d3a0b93d3f624c43",
+    "url": "https://github.com/Digidai/AgentSDR/actions/runs/39414037184"
+  },
+  "native_tests": 244,
+  "audit_tests": 53,
+  "baseline_audit_failures": 29,
+  "compiled_workerd_checks": 19,
+  "read_only_live_checks": 29,
+  "schema_migrations": 0,
+  "production_business_data_mutations_by_qa": 0,
+  "real_emails_sent_by_qa": 0,
+  "real_phone_calls_by_qa": 0,
+  "owner_initialized": true,
+  "architecture": [
+    "Workers",
+    "D1",
+    "R2",
+    "Queues",
+    "Cron",
+    "Workers AI"
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "checked_at": "2026-10-20T11:20:51.094Z",
+  "origin": "https://sdr.genedai.me",
+  "expected_sha": "2ae5f470c6b0ccde91c118a6d3a0b93d3f624c43",
+  "production_mutations": 0,
+  "real_provider_calls": 0,
+  "checks": [
+    {
+      "name": "HTTPS health and exact pushed runtime SHA",
+      "ok": true
+    },
+    {
+      "name": "Existing owner stays initialized and anonymous requests have no user",
+      "ok": true
+    },
+    {
+      "name": "Private API responses cannot be cached",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/people",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/inbox",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/settings",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/accounts",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/provider-connections",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/ai/connections",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/http-secrets",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/crm/categories",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/crm/classifications",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/calling/campaigns",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/calls",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/organizations",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/teams",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/tables",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/jobs",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /api/send-attempts",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /recorder.zip",
+      "ok": true
+    },
+    {
+      "name": "Authentication required: /downloads/call-recorder",
+      "ok": true
+    },
+    {
+      "name": "Recorder capability required",
+      "ok": true
+    },
+    {
+      "name": "Private recording signature required",
+      "ok": true
+    },
+    {
+      "name": "Application shell serves successfully",
+      "ok": true
+    },
+    {
+      "name": "Security headers restrict scripts and framing",
+      "ok": true
+    },
+    {
+      "name": "Application HTML matches this build after the known Cloudflare transform",
+      "ok": true
+    },
+    {
+      "name": "Asset hash: index-BOW1zxeR.css",
+      "ok": true
+    },
+    {
+      "name": "Asset hash: index-D_W-K_mL.js",
+      "ok": true
+    },
+    {
+      "name": "Asset hash: xlsx-YQ4lDkt_.js",
+      "ok": true
+    }
+  ],
+  "assets": [
+    {
+      "path": "/assets/index-BOW1zxeR.css",
+      "sha256": "0752a1cb892054be8b95fd1c59d6cce457dc0234fa1ff82017569b3562d93f61"
+    },
+    {
+      "path": "/assets/index-D_W-K_mL.js",
+      "sha256": "767e90dc78aee96568e60caf44979706f4f1096858c51e5e67d877cfc3bb7ec9"
+    },
+    {
+      "path": "/assets/xlsx-YQ4lDkt_.js",
+      "sha256": "641458ad92d6b9c702268ddafc2acc96ebbd06f7bc0e851ee5384e32837ae630"
+    }
+  ]
+}

@@ -10,7 +10,15 @@ The implemented upstream feature families now have Cloudflare-native equivalents
 
 The native APIs are redesigned; legacy Next.js clients are not wire compatible. Upstream declaration-only grid runners and the deferred ads stage were not implemented upstream. Debug environment disclosure is intentionally replaced by non-sensitive health checks. Upstream does not include its private domain dataset; the native workspace supports importing an organization's own catalog.
 
-## Verification before release
+## Current audit verification (2026-10-20)
+
+- Native TypeScript, **244 tests**, frontend/recorder build and dependency audit passed; 0 known dependency vulnerabilities.
+- The new **53 audit tests** fail 29 scenarios on an isolated copy of `fc015a9` and all pass after fixes. This is a scenario count, not a claim of 29 independent root causes.
+- **19 compiled workerd checks** passed, including real queue consumption, atomic delivery receipts, deduplication, 150-column D1 operations and R2 tenant isolation.
+- **29 read-only production checks** passed. No authenticated production QA mutations or real provider sends/calls were made.
+- [Audit report](bug-audit-2026-10-20.md), [baseline comparison](bug-audit-baseline.json), [deployment receipt](bug-audit-deployment.json), [production verification](bug-audit-live-verification.json).
+
+## Historical initial parity verification
 
 - Native TypeScript, 186 tests, frontend/recorder build and npm audit passed (0 vulnerabilities).
 - Eight checks passed against the actual compiled Worker in workerd, including static QuickJS WASM, libraries, WebCrypto, D1 and recorder session creation.
@@ -20,7 +28,9 @@ The native APIs are redesigned; legacy Next.js clients are not wire compatible. 
 
 ## Release state
 
-As of **2026-10-20**, production at **https://sdr.genedai.me** runs the provider connection repair from pushed SHA `e53318462ac56bf5e836d3d3ec3e6c2182a7d4b2`. Worker version `0a991800-da75-401a-8e50-be3419ece63d` receives 100% traffic. [CI 39396361717](https://github.com/Digidai/AgentSDR/actions/runs/39396361717) passed 191 tests, builds, audit and 12 compiled workerd checks. Four read-only post-deployment checks confirm the exact release, existing initialized owner, frontend asset hash and authentication boundary. See [repair details](resend-connection-fix.md) and [current receipt](resend-connection-deployment.json). Resend connection success still requires the user's post-deployment retry; no real email was sent by this repair.
+As of **2026-10-20**, production at **https://sdr.genedai.me** runs the audit fixes and legacy follow-up recovery guard from pushed SHA `2ae5f470c6b0ccde91c118a6d3a0b93d3f624c43`. Worker version `7c33560f-0249-4c85-9156-c0cb28e418a9`, deployment `da46f87d-9931-4ce0-a058-70390b942d2e`, receives **100% traffic**. [CI 39414037184](https://github.com/Digidai/AgentSDR/actions/runs/39414037184) passed on that exact SHA with 244 tests and 19 compiled runtime checks. Production checks confirm exact SHA, existing initialized owner, authentication and recording boundaries, security headers, HTML and asset hashes. No schema migration was required.
+
+The earlier provider connection repair used pushed SHA `e53318462ac56bf5e836d3d3ec3e6c2182a7d4b2`, Worker version `0a991800-da75-401a-8e50-be3419ece63d` and [CI 39396361717](https://github.com/Digidai/AgentSDR/actions/runs/39396361717), with 191 tests and 12 compiled checks. Its [repair details](resend-connection-fix.md) and [historical receipt](resend-connection-deployment.json) remain available. This audit does not establish the outcome of any later user-initiated real provider delivery.
 
 The initial parity release used exact code SHA `f16a389a9a425fb9ee17fd73025c88a90ebd3c91`, Worker version `3b3f5776-b187-4adb-a432-256a9f155a01`. GitHub Actions [39047228392](https://github.com/Digidai/AgentSDR/actions/runs/39047228392) succeeded on that SHA. Remote additive migration `0002_upstream_parity.sql` applied successfully (78 commands); the pre-migration export remains private and ignored.
 
@@ -34,6 +44,6 @@ Gene Dai Account (`48d9ccaf5ee7914c803b5d0656462848`); Worker `agentsdr-native`;
 
 ## Configuration and acceptance boundaries
 
-Production was still uninitialized at the pre-migration check. Preserve the existing private bootstrap token and let the user create the owner. No real contacts, provider credentials or outbound messages are added by this migration. Gmail/Google sign-in, Unipile, provider APIs, authentication email and strict BYOK require the user's accounts/keys in the workspace settings.
+Production now has an initialized owner. Preserve the existing workspace, provider configuration and private bootstrap token. This audit added no real contacts, provider credentials or outbound messages. Gmail/Google sign-in, Unipile, provider APIs, authentication email and strict BYOK require the user's accounts/keys in the workspace settings.
 
 Automated fixture coverage does not establish actual Gmail delivery, LinkedIn/WhatsApp account permissions, BYOK billing configuration, real microphone capture or completed phone calls. `AGENTS.md` excludes unsolicited browser automation, so no browser interaction or responsive screenshots are claimed. Manual acceptance: owner setup; desktop/mobile navigation; small CSV import and formula edit; provider connection and an owned-recipient email; recorder installation/WhatsApp login and a controlled real call.
