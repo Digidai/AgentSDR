@@ -86,7 +86,7 @@ export async function featureJob(env: Env, job: Row, payload: Row) {
 export async function featureTick(env: Env) {
   const slot = Math.floor(Date.now() / 300000);
   const mailboxes = await env.DB.prepare(
-    "SELECT id,org_id,watch_expires_at FROM channel_accounts WHERE channel='email' AND status='connected' LIMIT 200",
+    "SELECT id,org_id,watch_expires_at FROM channel_accounts WHERE channel='email' AND status='connected' AND json_extract(settings,'$.provider')='gmail' LIMIT 200",
   ).all<Row>();
   for (const a of mailboxes.results) {
     await enqueue(

@@ -26,18 +26,25 @@ export async function api(path: string, method = "GET", body?: unknown) {
   return data;
 }
 export function useData(path: string, refresh = 0) {
-  const [data, setData] = useState<Row | null>(null),
-    [error, setError] = useState("");
+  const [result, setResult] = useState<{ path: string; data: Row } | null>(
+      null,
+    ),
+    [failure, setFailure] = useState<{ path: string; message: string } | null>(
+      null,
+    );
   useEffect(() => {
     let active = true;
-    setError("");
+    setFailure(null);
     const pull = () =>
       api(path)
         .then((r) => {
-          if (active) setData(r);
+          if (active) {
+            setResult({ path, data: r });
+            setFailure(null);
+          }
         })
         .catch((e) => {
-          if (active) setError(e.message);
+          if (active) setFailure({ path, message: e.message });
         });
     void pull();
     const timer =
@@ -53,7 +60,10 @@ export function useData(path: string, refresh = 0) {
       active = false;
     };
   }, [path, refresh]);
-  return { data, error };
+  return {
+    data: result?.path === path ? result.data : null,
+    error: failure?.path === path ? failure.message : "",
+  };
 }
 export function csvDownload(items: Row[], name: string) {
   const data = Papa.unparse(items, { escapeFormulae: true });
@@ -96,7 +106,7 @@ const aliases: Record<string, string> = {
   公司: "company",
   jobtitle: "title",
   职位: "title",
-  phoneNumber: "phone",
+  phonenumber: "phone",
   电话号码: "phone",
   电话: "phone",
   linkedinurl: "linkedin",

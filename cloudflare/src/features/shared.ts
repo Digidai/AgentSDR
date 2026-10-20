@@ -107,10 +107,18 @@ export function convertField(
     };
   return { value: String(value), compatible: true };
 }
+// Custom lead data is user editable; it is never an R2 capability.
+export function isPhotoKey(org: string, value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.startsWith(`${org}/photos/`) &&
+    /^[0-9a-f-]{36}$/i.test(value.slice(`${org}/photos/`.length))
+  );
+}
 export async function purgePersonMedia(env: Env, org: string, pid: string) {
   const person = await record(env, org, "people", pid),
     photo = json<Row>(person.custom, {}).photo_key;
-  if (photo) await env.MEDIA.delete(photo);
+  if (isPhotoKey(org, photo)) await env.MEDIA.delete(photo);
   const files = await env.DB.prepare(
     "SELECT object_key FROM files WHERE org_id=? AND person_id=?",
   )

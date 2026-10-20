@@ -169,8 +169,8 @@ api.get("/people", async (c) => {
   const values: any[] = [c.get("user").org_id];
   if (q) {
     where +=
-      " AND (name LIKE ? OR email LIKE ? OR company LIKE ? OR title LIKE ?)";
-    values.push(...Array(4).fill(`%${q}%`));
+      " AND (instr(lower(name),lower(?))>0 OR instr(lower(email),lower(?))>0 OR instr(lower(company),lower(?))>0 OR instr(lower(title),lower(?))>0)";
+    values.push(...Array(4).fill(q));
   }
   if (stage && stages.includes(stage)) {
     where += " AND stage=?";
@@ -591,21 +591,13 @@ api.post("/messages", async (c) => {
   const p = await scoped(c, "people", String(b.person_id));
   check(channels.includes(b.channel), "Choose a channel");
   check(text(b.body), "Enter a reply");
-  const mid = id();
-  await c.env.DB.batch([
-    c.env.DB.prepare(
-      "INSERT INTO messages(id,org_id,person_id,channel,direction,subject,body,status) VALUES(?,?,?,?,'inbound',?,?,'received')",
-    ).bind(mid, p.org_id, p.id, b.channel, text(b.subject, 300), text(b.body)),
-    c.env.DB.prepare(
-      "UPDATE enrollments SET status='replied' WHERE org_id=? AND person_id=? AND status='active'",
-    ).bind(p.org_id, p.id),
-  ]);
-  await event(c.env, p.org_id, "message.received", "Reply logged", p.id);
-  const job = await enqueue(c.env, p.org_id, "crm", {
+  const result = await receive(c.env, p.org_id, b.channel, {
     person_id: p.id,
-    message_id: mid,
+    external_id: `manual:${id()}`,
+    subject: b.subject,
+    body: b.body,
   });
-  return c.json({ id: mid, job }, 201);
+  return c.json({ id: result.id, job: result.job }, 201);
 });
 api.post("/ai/draft", async (c) => {
   await limit(c.env, `ai:${c.get("user").org_id}`, 40, 3600);
@@ -962,19 +954,28 @@ api.delete("/members/:id", async (c) => {
     .bind(c.get("user").org_id, c.req.param("id"))
     .first<{ role: string }>();
   check(row && row.role !== "owner", "The workspace owner cannot be removed");
-  await c.env.DB.batch([
-    c.env.DB.prepare("DELETE FROM members WHERE org_id=? AND user_id=?").bind(
+  const result = await c.env.DB.batch([
+    c.env.DB.prepare(
+      "DELETE FROM members WHERE org_id=? AND user_id=? AND role<>'owner'",
+    ).bind(c.get("user").org_id, c.req.param("id")),
+    c.env.DB.prepare(
+      "DELETE FROM team_members WHERE user_id=? AND team_id IN (SELECT id FROM teams WHERE org_id=?) AND NOT EXISTS(SELECT 1 FROM members WHERE org_id=? AND user_id=?)",
+    ).bind(
+      c.req.param("id"),
+      c.get("user").org_id,
       c.get("user").org_id,
       c.req.param("id"),
     ),
     c.env.DB.prepare(
-      "DELETE FROM team_members WHERE user_id=? AND team_id IN (SELECT id FROM teams WHERE org_id=?)",
-    ).bind(c.req.param("id"), c.get("user").org_id),
-    c.env.DB.prepare("DELETE FROM sessions WHERE org_id=? AND user_id=?").bind(
+      "DELETE FROM sessions WHERE org_id=? AND user_id=? AND NOT EXISTS(SELECT 1 FROM members WHERE org_id=? AND user_id=?)",
+    ).bind(
+      c.get("user").org_id,
+      c.req.param("id"),
       c.get("user").org_id,
       c.req.param("id"),
     ),
   ]);
+  check(result[0].meta.changes, "The workspace owner cannot be removed");
   return c.json({ ok: true });
 });
 api.post("/knowledge", async (c) => {

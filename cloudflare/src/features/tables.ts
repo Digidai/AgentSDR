@@ -158,8 +158,12 @@ export function columnDependencies(column: Column) {
         .filter((b: any) => b?.source === "column" || b?.columnKey)
         .map((b: any) => String(b.columnKey)),
       ...(cfg.dependsOn || []),
+      ...(["integration_output", "ai_output"].includes(column.type) &&
+      cfg.parentColumnKey
+        ? [cfg.parentColumnKey]
+        : []),
     ]),
-  ].filter((k) => k !== column.key);
+  ];
 }
 export function orderedColumns(columns: Column[]) {
   const result: Column[] = [],
@@ -190,7 +194,10 @@ tableFeatures.patch("/tables/:id", async (c) => {
     ),
     b = await c.req.json<Row>(),
     columns: Column[] = b.columns || json(t.columns, []);
-  ensure(columns.length <= 150, "Use at most 150 columns");
+  ensure(
+    Array.isArray(columns) && columns.length <= 150,
+    "Use at most 150 columns",
+  );
   const keys = new Set();
   for (const col of columns) {
     ensure(
@@ -267,13 +274,38 @@ tableFeatures.patch("/tables/:id", async (c) => {
           columns.some((c) => c.key === key),
           `Formula references unknown column ${key}`,
         );
-  orderedColumns(columns);
+  try {
+    orderedColumns(columns);
+  } catch (error) {
+    ensure(false, (error as Error).message);
+  }
   if (b.workbook_id) await record(c.env, orgId(c), "workbooks", b.workbook_id);
   if (b.folder_id) await record(c.env, orgId(c), "folders", b.folder_id);
-  await c.env.DB.prepare(
-    "UPDATE enrichment_tables SET name=?,columns=?,workbook_id=?,folder_id=?,view=?,auto_run=? WHERE id=? AND org_id=?",
-  )
-    .bind(
+  const oldColumns = json<Column[]>(t.columns, []);
+  const executionConfig = (col: Column) => {
+    const { name, ...rest } = col;
+    return JSON.stringify(rest);
+  };
+  const changed = new Set<string>();
+  for (const old of oldColumns) {
+    const next = columns.find((c) => c.key === old.key);
+    if (!next || executionConfig(next) !== executionConfig(old))
+      changed.add(old.key);
+  }
+  for (const col of columns)
+    if (!oldColumns.some((c) => c.key === col.key)) changed.add(col.key);
+  // A changed parent invalidates all of its transitive consumers, including
+  // physical output columns. Revision fencing rejects in-flight old results.
+  for (let size = -1; size !== changed.size;) {
+    size = changed.size;
+    for (const col of columns)
+      if (columnDependencies(col).some((key) => changed.has(key)))
+        changed.add(col.key);
+  }
+  const updates: D1PreparedStatement[] = [
+    c.env.DB.prepare(
+      "UPDATE enrichment_tables SET name=?,columns=?,workbook_id=?,folder_id=?,view=?,auto_run=? WHERE id=? AND org_id=?",
+    ).bind(
       text(b.name, 200) || t.name,
       JSON.stringify(columns),
       b.workbook_id === undefined ? t.workbook_id : b.workbook_id,
@@ -282,8 +314,65 @@ tableFeatures.patch("/tables/:id", async (c) => {
       b.auto_run === undefined ? t.auto_run : b.auto_run ? 1 : 0,
       t.id,
       orgId(c),
-    )
-    .run();
+    ),
+  ];
+  if (changed.size) {
+    const paths = [...changed].map((key) => `$."${key}"`);
+    // Only runnable/output values are derived. Preserve edited input values.
+    const derived = paths.filter((_, i) => {
+      const key = [...changed][i],
+        col =
+          columns.find((c) => c.key === key) ||
+          oldColumns.find((c) => c.key === key);
+      return (
+        col &&
+        [
+          "ai",
+          "http",
+          "hunter",
+          "apollo",
+          "formula",
+          "enrichment",
+          "ai_output",
+          "integration_output",
+        ].includes(col.type)
+      );
+    });
+    // D1 caps SQL function arguments at 32 and bound parameters at 100.
+    // Each chunk stays below both limits even at the full 150-column size.
+    for (let i = 0; i < paths.length; i += 25) {
+      const part = paths.slice(i, i + 25);
+      updates.push(
+        c.env.DB.prepare(
+          `UPDATE table_rows SET cell_meta=json_remove(cell_meta,${part.map(() => "?").join(",")}) WHERE org_id=? AND table_id=?`,
+        ).bind(...part, orgId(c), t.id),
+      );
+    }
+    for (let i = 0; i < derived.length; i += 25) {
+      const part = derived.slice(i, i + 25);
+      updates.push(
+        c.env.DB.prepare(
+          `UPDATE table_rows SET cells=json_remove(cells,${part.map(() => "?").join(",")}) WHERE org_id=? AND table_id=?`,
+        ).bind(...part, orgId(c), t.id),
+      );
+    }
+    updates.push(
+      c.env.DB.prepare(
+        "UPDATE table_rows SET revision=revision+1,status='ready',error='' WHERE org_id=? AND table_id=?",
+      ).bind(orgId(c), t.id),
+    );
+    updates.push(
+      c.env.DB.prepare(
+        "UPDATE jobs SET status='done',error='Table configuration changed' WHERE org_id=? AND kind='table-row' AND status IN ('pending','queued','running') AND json_extract(payload,'$.table_id')=?",
+      ).bind(orgId(c), t.id),
+    );
+    updates.push(
+      c.env.DB.prepare(
+        "UPDATE cell_runs SET status='cancelled' WHERE org_id=? AND table_id=? AND status IN ('running','processing')",
+      ).bind(orgId(c), t.id),
+    );
+  }
+  await c.env.DB.batch(updates);
   return c.json({ ok: true });
 });
 tableFeatures.patch("/tables/:id/rows/:row", async (c) => {
@@ -296,6 +385,10 @@ tableFeatures.patch("/tables/:id/rows/:row", async (c) => {
     r = await record(c.env, orgId(c), "table_rows", c.req.param("row")),
     b = await c.req.json<Row>();
   ensure(r.table_id === t.id, "Row not found", 404);
+  ensure(
+    b.cells && typeof b.cells === "object" && !Array.isArray(b.cells),
+    "Use a cells object",
+  );
   const cells = { ...json<Row>(r.cells, {}), ...b.cells };
   ensure(JSON.stringify(cells).length < 250000, "Row data is too large");
   await c.env.DB.prepare(
@@ -304,7 +397,7 @@ tableFeatures.patch("/tables/:id/rows/:row", async (c) => {
     .bind(JSON.stringify(cells), r.id, orgId(c))
     .run();
   await c.env.DB.prepare(
-    "UPDATE cell_runs SET status='cancelled' WHERE org_id=? AND row_id=? AND status='processing'",
+    "UPDATE cell_runs SET status='cancelled' WHERE org_id=? AND row_id=? AND status IN ('running','processing')",
   )
     .bind(orgId(c), r.id)
     .run();
@@ -524,6 +617,15 @@ tableFeatures.post("/tables/:id/run", async (c) => {
     ),
     "Add a runnable column first",
   );
+  if (b.column_keys !== undefined && b.column_keys !== null)
+    ensure(
+      Array.isArray(b.column_keys) &&
+        b.column_keys.length <= 150 &&
+        b.column_keys.every((key: unknown) =>
+          columns.some((c) => c.key === key),
+        ),
+      "Choose existing column keys",
+    );
   const rows = await c.env.DB.prepare(
     "SELECT id FROM table_rows WHERE org_id=? AND table_id=? ORDER BY rowid LIMIT 1000",
   )
@@ -563,11 +665,17 @@ tableFeatures.get("/tables/:id/runs", async (c) => {
 });
 tableFeatures.post("/tables/:id/stop", async (c) => {
   await record(c.env, orgId(c), "enrichment_tables", c.req.param("id"));
-  await c.env.DB.prepare(
-    "UPDATE jobs SET status='done',error='Cancelled by user' WHERE org_id=? AND kind='table-row' AND status IN ('pending','queued','running') AND json_extract(payload,'$.table_id')=?",
-  )
-    .bind(orgId(c), c.req.param("id"))
-    .run();
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      "UPDATE jobs SET status='done',error='Cancelled by user' WHERE org_id=? AND kind='table-row' AND status IN ('pending','queued','running') AND json_extract(payload,'$.table_id')=?",
+    ).bind(orgId(c), c.req.param("id")),
+    c.env.DB.prepare(
+      "UPDATE table_rows SET status='ready',revision=revision+1,error='' WHERE org_id=? AND table_id=? AND status IN ('queued','running')",
+    ).bind(orgId(c), c.req.param("id")),
+    c.env.DB.prepare(
+      "UPDATE cell_runs SET status='cancelled' WHERE org_id=? AND table_id=? AND status IN ('running','processing')",
+    ).bind(orgId(c), c.req.param("id")),
+  ]);
   return c.json({ ok: true });
 });
 export async function executeTableRow(env: Env, job: Row, payload: Row) {
@@ -580,7 +688,7 @@ export async function executeTableRow(env: Env, job: Row, payload: Row) {
     row = await record(env, job.org_id, "table_rows", payload.row_id);
   ensure(row.table_id === t.id, "Row not found", 404);
   const locked = await env.DB.prepare(
-    "UPDATE table_rows SET run_lock=?,run_lock_until=? WHERE id=? AND org_id=? AND (run_lock IS NULL OR run_lock=? OR run_lock_until<?) RETURNING id",
+    "UPDATE table_rows SET run_lock=?,run_lock_until=? WHERE id=? AND org_id=? AND (run_lock IS NULL OR run_lock=? OR run_lock_until<?) RETURNING *",
   )
     .bind(
       job.id,
@@ -590,7 +698,7 @@ export async function executeTableRow(env: Env, job: Row, payload: Row) {
       job.id,
       now(),
     )
-    .first();
+    .first<Row>();
   if (!locked) {
     await env.DB.prepare(
       "UPDATE jobs SET status='pending',available_at=? WHERE id=?",
@@ -600,9 +708,23 @@ export async function executeTableRow(env: Env, job: Row, payload: Row) {
     return;
   }
   try {
+    Object.assign(row, locked);
     const columns = orderedColumns(json<Column[]>(t.columns, [])),
       cells = json<Row>(row.cells, {}),
       meta = json<Row>(row.cell_meta, {});
+    const selected = payload.column_keys
+      ? new Set<string>(payload.column_keys)
+      : null;
+    if (selected)
+      for (let size = -1; size !== selected.size;) {
+        size = selected.size;
+        for (const col of columns)
+          if (selected.has(col.key))
+            for (const key of columnDependencies(col)) selected.add(key);
+      }
+    if (payload.force && !payload.resume)
+      for (const col of columns)
+        if (!selected || selected.has(col.key)) delete meta[col.key];
     let pending = false,
       processed = 0;
     const started = Date.now();
@@ -637,16 +759,22 @@ export async function executeTableRow(env: Env, job: Row, payload: Row) {
         ].includes(col.type)
       )
         continue;
-      if (payload.column_keys && !payload.column_keys.includes(col.key))
-        continue;
+      if (selected && !selected.has(col.key)) continue;
       if (
         meta[col.key]?.status === "success" &&
         (!payload.force || payload.resume)
       )
         continue;
       if (
-        columnDependencies(col).some((key) =>
-          ["error", "blocked", "processing"].includes(meta[key]?.status),
+        columnDependencies(col).some(
+          (key) =>
+            ["error", "blocked", "processing"].includes(meta[key]?.status) ||
+            columnDependencies(columns.find((c) => c.key === key) || col).some(
+              (parent) =>
+                ["error", "blocked", "processing"].includes(
+                  meta[parent]?.status,
+                ),
+            ),
         )
       ) {
         meta[col.key] = {
@@ -947,6 +1075,12 @@ export async function executeTableRow(env: Env, job: Row, payload: Row) {
           cost = result.costCents;
           audit = { request: result.request, response: result.response };
         }
+        const currentResult = await env.DB.prepare(
+          "SELECT 1 FROM table_rows r JOIN jobs j ON j.id=? WHERE r.id=? AND r.org_id=? AND r.revision=? AND j.status='running'",
+        )
+          .bind(job.id, row.id, job.org_id, row.revision)
+          .first();
+        if (!currentResult) return;
         cells[col.key] = value ?? null;
         Object.assign(cells, outputs);
         meta[col.key] = {
@@ -957,7 +1091,7 @@ export async function executeTableRow(env: Env, job: Row, payload: Row) {
           runAt: now(),
         };
         await env.DB.prepare(
-          "UPDATE cell_runs SET status='done',value=?,outputs=?,provider=?,cost_cents=?,audit=?,updated_at=? WHERE id=? AND org_id=?",
+          "UPDATE cell_runs SET status='done',value=?,outputs=?,provider=?,cost_cents=?,audit=?,updated_at=? WHERE id=? AND org_id=? AND status<>'cancelled'",
         )
           .bind(
             JSON.stringify(value ?? null),
@@ -982,13 +1116,13 @@ export async function executeTableRow(env: Env, job: Row, payload: Row) {
           attempts: Number(meta[col.key]?.attempts || 0) + 1,
         };
         await env.DB.prepare(
-          "UPDATE cell_runs SET status='failed',error=?,updated_at=? WHERE id=? AND org_id=?",
+          "UPDATE cell_runs SET status='failed',error=?,updated_at=? WHERE id=? AND org_id=? AND status<>'cancelled'",
         )
           .bind(text((error as Error).message, 500), now(), runId, job.org_id)
           .run();
       }
       await env.DB.prepare(
-        "UPDATE table_rows SET cells=?,cell_meta=? WHERE id=? AND org_id=? AND revision=?",
+        "UPDATE table_rows SET cells=?,cell_meta=? WHERE id=? AND org_id=? AND revision=? AND EXISTS(SELECT 1 FROM jobs WHERE id=? AND status IN ('running','pending'))",
       )
         .bind(
           JSON.stringify(cells),
@@ -996,6 +1130,7 @@ export async function executeTableRow(env: Env, job: Row, payload: Row) {
           row.id,
           job.org_id,
           row.revision,
+          job.id,
         )
         .run();
     }
@@ -1022,7 +1157,7 @@ export async function executeTableRow(env: Env, job: Row, payload: Row) {
       pending = true;
     }
     await env.DB.prepare(
-      "UPDATE table_rows SET cells=?,cell_meta=?,status=?,error=? WHERE id=? AND org_id=? AND revision=?",
+      "UPDATE table_rows SET cells=?,cell_meta=?,status=?,error=? WHERE id=? AND org_id=? AND revision=? AND EXISTS(SELECT 1 FROM jobs WHERE id=? AND status IN ('running','pending'))",
     )
       .bind(
         JSON.stringify(cells),
@@ -1040,6 +1175,7 @@ export async function executeTableRow(env: Env, job: Row, payload: Row) {
         row.id,
         job.org_id,
         row.revision,
+        job.id,
       )
       .run();
   } finally {

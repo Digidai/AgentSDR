@@ -70,3 +70,7 @@ Campaign sends require activation and configured channels; CRM follow-ups create
 UI/browser automation is deliberately excluded by this repository's `AGENTS.md`. Manual acceptance should cover owner setup, desktop/mobile navigation, column/forms, a controlled owned-recipient email, and a real recorder call after provider configuration. No claim of real provider delivery, actual calls or microphone capture follows from the automated tests.
 
 MIT license: [LICENSE](../LICENSE). Ported upstream and third-party notices: [ported/README.md](src/ported/README.md).
+
+## Bug audit (2026-10-20)
+
+See [the audit report](../docs/research/bug-audit-2026-10-20.md) for the 52-scenario baseline comparison, fixes and acceptance boundaries. For an initialized production workspace, use `node scripts/live-readonly-check.mjs <exact-deployed-sha> <output-json>`; the fresh-install checker must not be rerun. The read-only checker makes GET requests only.

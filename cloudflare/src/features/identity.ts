@@ -121,19 +121,28 @@ publicIdentity.post("/auth/reset-password", async (c) => {
       b.password.length <= 128,
     "Use a password between 12 and 128 characters",
   );
+  const tokenHash = await digest(String(b.token || ""));
   const row = await c.env.DB.prepare(
-    "UPDATE auth_tokens SET used_at=? WHERE token_hash=? AND kind='reset' AND used_at IS NULL AND expires_at>? RETURNING user_id",
+    "SELECT user_id FROM auth_tokens WHERE token_hash=? AND kind='reset' AND used_at IS NULL AND expires_at>?",
   )
-    .bind(now(), await digest(String(b.token || "")), now())
+    .bind(tokenHash, now())
     .first<{ user_id: string }>();
   ensure(row, "Reset link is invalid or expired");
-  await c.env.DB.batch([
-    c.env.DB.prepare("UPDATE users SET password_hash=? WHERE id=?").bind(
-      await hashPassword(b.password),
-      row.user_id,
-    ),
-    c.env.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(row.user_id),
+  const password = await hashPassword(b.password);
+  // A token is consumed only with its password change and session revocation.
+  // The fresh salted hash identifies this batch if a competing reset won first.
+  const result = await c.env.DB.batch([
+    c.env.DB.prepare(
+      "UPDATE users SET password_hash=? WHERE id=? AND EXISTS(SELECT 1 FROM auth_tokens WHERE token_hash=? AND kind='reset' AND used_at IS NULL AND expires_at>?)",
+    ).bind(password, row.user_id, tokenHash, now()),
+    c.env.DB.prepare(
+      "DELETE FROM sessions WHERE user_id=? AND EXISTS(SELECT 1 FROM users WHERE id=? AND password_hash=?)",
+    ).bind(row.user_id, row.user_id, password),
+    c.env.DB.prepare(
+      "UPDATE auth_tokens SET used_at=? WHERE user_id=? AND kind='reset' AND used_at IS NULL AND EXISTS(SELECT 1 FROM users WHERE id=? AND password_hash=?)",
+    ).bind(now(), row.user_id, row.user_id, password),
   ]);
+  ensure(result[0].meta.changes, "Reset link is invalid or expired");
   return c.json({ ok: true });
 });
 publicIdentity.get("/auth/verify-email", async (c) => {
@@ -442,19 +451,14 @@ identityFeatures.patch("/members/:id", async (c) => {
     "Only owners can manage owners",
     403,
   );
-  if (current.role === "owner" && b.role !== "owner") {
-    const owners = await c.env.DB.prepare(
-      "SELECT COUNT(*) n FROM members WHERE org_id=? AND role='owner'",
-    )
-      .bind(orgId(c))
-      .first<{ n: number }>();
-    ensure((owners?.n || 0) > 1, "Keep at least one workspace owner");
-  }
-  await c.env.DB.prepare(
-    "UPDATE members SET role=? WHERE org_id=? AND user_id=?",
+  // Keep the owner invariant in the same SQLite statement as the mutation.
+  // Checking COUNT before UPDATE lets two concurrent demotions remove both.
+  const updated = await c.env.DB.prepare(
+    "UPDATE members SET role=? WHERE org_id=? AND user_id=? AND (role<>'owner' OR ?='owner' OR (SELECT COUNT(*) FROM members WHERE org_id=? AND role='owner')>1) RETURNING user_id",
   )
-    .bind(b.role, orgId(c), c.req.param("id"))
-    .run();
+    .bind(b.role, orgId(c), c.req.param("id"), b.role, orgId(c))
+    .first();
+  ensure(updated, "Keep at least one workspace owner");
   return c.json({ ok: true });
 });
 identityFeatures.get("/invitations", async (c) => {

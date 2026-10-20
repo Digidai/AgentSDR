@@ -90,7 +90,8 @@ export async function lookupRegistry(
 ) {
   const refs = parseLookupCalls(expression);
   const names = refs.map((r) => r.tableToken);
-  const registry: Row = {};
+  const registry: Row = Object.create(null);
+  let bytes = 0;
   for (const name of new Set(names)) {
     const tables = await env.DB.prepare(
       "SELECT * FROM enrichment_tables WHERE org_id=? AND (id=? OR lower(name)=lower(?))",
@@ -99,8 +100,20 @@ export async function lookupRegistry(
       .all<Row>();
     if (tables.results.length !== 1)
       throw new Error(`LOOKUP table ${name} is unknown or ambiguous`);
-    const table = tables.results[0],
-      columns = json<Row[]>(table.columns, []),
+    const table = tables.results[0];
+    const size = await env.DB.prepare(
+      "SELECT COUNT(*) count,COALESCE(SUM(length(CAST(cells AS BLOB))),0) bytes FROM table_rows WHERE org_id=? AND table_id=?",
+    )
+      .bind(org, table.id)
+      .first<Row>();
+    if (Number(size?.count) > 50000)
+      throw new Error("LOOKUP source table exceeds 50,000 rows");
+    bytes += Number(size?.bytes || 0);
+    if (bytes > 1024 * 1024)
+      throw new Error(
+        "LOOKUP source data exceeds the 1 MiB formula budget; use a smaller lookup table",
+      );
+    const columns = json<Row[]>(table.columns, []),
       rows = await env.DB.prepare(
         "SELECT cells FROM table_rows WHERE org_id=? AND table_id=? LIMIT 50001",
       )
@@ -130,5 +143,10 @@ export async function lookupRegistry(
       };
     });
   }
+  if (
+    new TextEncoder().encode(JSON.stringify(registry)).byteLength >
+    2 * 1024 * 1024
+  )
+    throw new Error("LOOKUP expanded data exceeds the 2 MiB formula budget");
   return registry;
 }

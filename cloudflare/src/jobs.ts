@@ -4,7 +4,7 @@ import {
 } from "./ported/crm-instructions";
 import { featureJob, featureTick } from "./features/runtime";
 import { selectAccount, reserveAccount, PacingWait } from "./features/channels";
-import { advanceCrmDraft, setCategory, ensureTaxonomy } from "./features/crm";
+import { crmDraftAdvance, setCategory, ensureTaxonomy } from "./features/crm";
 import { pref } from "./features/shared";
 import type { Env, Row, Column } from "./types";
 import {
@@ -13,6 +13,7 @@ import {
   id,
   json,
   now,
+  render,
   sendingWindow,
   text,
 } from "./core";
@@ -143,7 +144,8 @@ async function sendJob(env: Env, job: Row, payload: Row) {
     if (
       !enrollment ||
       enrollment.status !== "active" ||
-      enrollment.step !== payload.step
+      enrollment.step !== payload.step ||
+      enrollment.person_id !== person.id
     )
       return;
     const found = await env.DB.prepare(
@@ -175,6 +177,8 @@ async function sendJob(env: Env, job: Row, payload: Row) {
       .bind(payload.draft_id, job.org_id)
       .first<Row>();
     if (!draft) return;
+    if (draft.person_id !== person.id)
+      throw new Error("Draft does not belong to this lead");
     const sequence = await env.DB.prepare(
       "SELECT status FROM crm_enrollments WHERE org_id=? AND draft_id=?",
     )
@@ -358,11 +362,83 @@ async function sendJob(env: Env, job: Row, payload: Row) {
     }
   }
   const attemptId = id();
-  await env.DB.prepare(
-    "INSERT INTO send_attempts(id,org_id,job_id,person_id,account_id,status) VALUES(?,?,?,?,?,'sending')",
-  )
-    .bind(attemptId, job.org_id, job.id, person.id, nativeAccount?.id || null)
-    .run();
+  // This atomic claim is the dispatch boundary. Replies/opt-outs/pauses that
+  // committed before it cancel the send, including changes during quota I/O.
+  const dispatch = await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO send_attempts(id,org_id,job_id,person_id,account_id,status)
+     SELECT ?,?,?,p.id,?,'sending' FROM people p WHERE p.id=? AND p.org_id=? AND p.dnc=0 AND p.crm_context=? AND (p.snoozed_until IS NULL OR p.snoozed_until<=?) AND NOT EXISTS(SELECT 1 FROM suppressions s WHERE s.org_id=p.org_id AND s.email=p.email) AND EXISTS(SELECT 1 FROM jobs WHERE id=? AND status='running') AND ${
+       payload.draft_id
+         ? "EXISTS(SELECT 1 FROM drafts d WHERE d.id=? AND d.org_id=p.org_id AND d.person_id=p.id AND d.status='queued' AND NOT EXISTS(SELECT 1 FROM crm_enrollments e WHERE e.org_id=p.org_id AND e.draft_id=d.id AND e.status<>'active'))"
+         : "EXISTS(SELECT 1 FROM enrollments e JOIN campaigns c ON c.id=e.campaign_id AND c.org_id=e.org_id WHERE e.id=? AND e.org_id=p.org_id AND e.person_id=p.id AND e.status='active' AND e.step=? AND c.status='active')"
+     } RETURNING id`,
+    ).bind(
+      attemptId,
+      job.org_id,
+      job.id,
+      nativeAccount?.id || null,
+      person.id,
+      job.org_id,
+      person.crm_context,
+      now(),
+      job.id,
+      ...(payload.draft_id
+        ? [payload.draft_id]
+        : [payload.enrollment_id, payload.step]),
+    ),
+    env.DB.prepare(
+      "UPDATE jobs SET result=? WHERE id=? AND EXISTS(SELECT 1 FROM send_attempts WHERE id=?)",
+    ).bind(
+      JSON.stringify({
+        dispatch: {
+          channel: campaign.channel,
+          campaign_id: campaign.id,
+          subject: render(step.subject || "", person),
+          body: render(step.body || "", person),
+        },
+      }),
+      job.id,
+      attemptId,
+    ),
+  ]);
+  if (!dispatch[0].meta.changes) {
+    await release();
+    await accountReservation?.release();
+    if (payload.draft_id) {
+      const sequence = await env.DB.prepare(
+        "SELECT status FROM crm_enrollments WHERE org_id=? AND draft_id=?",
+      )
+        .bind(job.org_id, payload.draft_id)
+        .first<Row>();
+      const latest = await env.DB.prepare(
+        "SELECT dnc,snoozed_until,crm_context FROM people WHERE org_id=? AND id=?",
+      )
+        .bind(job.org_id, person.id)
+        .first<Row>();
+      if (
+        sequence?.status === "paused" ||
+        (latest?.snoozed_until && latest.snoozed_until > now())
+      ) {
+        await defer(env, job, "Lead or sequence is paused");
+        return;
+      }
+      await env.DB.prepare(
+        "UPDATE drafts SET status='discarded' WHERE id=? AND org_id=? AND status='queued'",
+      )
+        .bind(payload.draft_id, job.org_id)
+        .run();
+    } else if (
+      (
+        await env.DB.prepare(
+          "SELECT status FROM campaigns WHERE id=? AND org_id=?",
+        )
+          .bind(campaign.id, job.org_id)
+          .first<Row>()
+      )?.status === "paused"
+    )
+      await defer(env, job, "Campaign is paused");
+    return;
+  }
   let delivered: {
     externalId: string;
     body: string;
@@ -413,7 +489,7 @@ async function sendJob(env: Env, job: Row, payload: Row) {
       env.DB.prepare(
         "INSERT INTO messages(id,org_id,person_id,campaign_id,channel,direction,subject,body,status,external_id,account_id,thread_id,metadata) VALUES(?,?,?,?,?,'outbound',?,?,'sent',?,?,?,?)",
       ).bind(
-        id(),
+        `receipt:${attemptId}`,
         job.org_id,
         person.id,
         campaign.id,
@@ -478,16 +554,21 @@ async function sendJob(env: Env, job: Row, payload: Row) {
           "UPDATE enrollments SET gate='acceptance' WHERE id=? AND org_id=? AND status='active'",
         ).bind(currentEnrollment.id, job.org_id),
       );
-    await env.DB.batch(statements);
-    if (payload.draft_id)
-      await advanceCrmDraft(env, job.org_id, payload.draft_id);
-    await event(
-      env,
-      job.org_id,
-      "message.sent",
-      `Sent via ${campaign.channel}`,
-      person.id,
+    if (payload.draft_id) {
+      const advance = await crmDraftAdvance(env, job.org_id, payload.draft_id);
+      if (advance) statements.push(advance);
+    }
+    statements.push(
+      env.DB.prepare(
+        "INSERT INTO events(id,org_id,type,detail,person_id) VALUES(?,?,'message.sent',?,?)",
+      ).bind(id(), job.org_id, `Sent via ${campaign.channel}`, person.id),
     );
+    statements.push(
+      env.DB.prepare(
+        "UPDATE jobs SET status='done',error='',updated_at=? WHERE id=? AND status='running'",
+      ).bind(now(), job.id),
+    );
+    await env.DB.batch(statements);
   } catch {
     await env.DB.prepare(
       "UPDATE send_attempts SET status='uncertain',external_id=? WHERE id=? AND org_id=?",
@@ -621,8 +702,8 @@ async function crmJob(env: Env, job: Row, payload: Row) {
   const chosenSub = taxonomy.results.find(
     (s) => s.id === result.subcategory_id,
   );
-  if (inbound)
-    await setCategory(
+  if (inbound) {
+    const classified = await setCategory(
       env,
       job.org_id,
       person.id,
@@ -632,7 +713,10 @@ async function crmJob(env: Env, job: Row, payload: Row) {
       String(result.reason || ""),
       Math.max(0, Math.min(1, Number(result.confidence) || 0)),
       inbound.id,
+      person.crm_context,
     );
+    if (!classified) return;
+  }
   const statements: D1PreparedStatement[] = [];
   if (inbound)
     statements.push(
@@ -666,7 +750,7 @@ async function crmJob(env: Env, job: Row, payload: Row) {
   )
     statements.push(
       env.DB.prepare(
-        "INSERT OR IGNORE INTO drafts(id,org_id,person_id,message_id,channel,subject,body) VALUES(?,?,?,?,?,?,?)",
+        "INSERT OR IGNORE INTO drafts(id,org_id,person_id,message_id,channel,subject,body) SELECT ?,?,?,?,?,?,? FROM people WHERE id=? AND org_id=? AND crm_context=? AND dnc=0 AND NOT EXISTS(SELECT 1 FROM crm_enrollments WHERE org_id=? AND person_id=? AND status IN ('active','paused'))",
       ).bind(
         id(),
         job.org_id,
@@ -675,16 +759,11 @@ async function crmJob(env: Env, job: Row, payload: Row) {
         inbound?.channel || payload.channel || "email",
         text(result.subject, 300),
         text(result.draft, 10000),
-      ),
-    );
-  if (classification === "interested" || classification === "meeting_requested")
-    statements.push(
-      env.DB.prepare(
-        "UPDATE people SET stage=? WHERE id=? AND org_id=? AND stage NOT IN ('customer','lost')",
-      ).bind(
-        classification === "interested" ? "interested" : "meeting",
         person.id,
         job.org_id,
+        person.crm_context,
+        job.org_id,
+        person.id,
       ),
     );
   if (statements.length) await env.DB.batch(statements);

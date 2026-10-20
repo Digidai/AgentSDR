@@ -38,8 +38,16 @@ const mf = new Miniflare(
     d1Databases: ["DB"],
     r2Buckets: ["MEDIA"],
     queueProducers: { TASKS: "runtime-tasks" },
+    queueConsumers: {
+      "runtime-tasks": { maxBatchSize: 1, maxBatchTimeout: 0 },
+    },
     outboundService: (request) => {
       providerRequests.push({ url: request.url, method: request.method });
+      if (
+        request.url === "https://api.resend.com/emails" &&
+        request.method === "POST"
+      )
+        return Response.json({ id: "runtime-delivery-fixture" });
       if (
         request.url !== "https://api.resend.com/domains" ||
         request.method !== "GET"
@@ -129,6 +137,7 @@ try {
   const person = await api("/people", "POST", {
       name: "Runtime contact",
       phone: "+12025550110",
+      email: "runtime-contact@example.invalid",
     }),
     started = await api("/calls", "POST", { personId: person.id });
   assert(!!started.recorderToken, "recorder session uses WebCrypto and D1");
@@ -167,6 +176,86 @@ try {
         (r) => r.url === "https://api.resend.com/domains" && r.method === "GET",
       ),
     "connection checks make only read-only provider requests",
+  );
+  const identity = (await api("/auth/status")).user;
+  await db
+    .prepare("UPDATE organizations SET start_hour=0,end_hour=24 WHERE id=?")
+    .bind(identity.org_id)
+    .run();
+  await db
+    .prepare(
+      "INSERT INTO drafts(id,org_id,person_id,channel,body) VALUES('runtime-draft',?,?,'email','Compiled runtime fixture')",
+    )
+    .bind(identity.org_id, person.id)
+    .run();
+  const queued = await api("/drafts/runtime-draft/send", "POST", {});
+  const until = Date.now() + 10000;
+  let sendJob;
+  do {
+    sendJob = await db
+      .prepare("SELECT * FROM jobs WHERE id=?")
+      .bind(queued.job)
+      .first();
+    if (["done", "failed", "uncertain"].includes(sendJob?.status)) break;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  } while (Date.now() < until);
+  assert(
+    sendJob?.status === "done",
+    "compiled queue executes atomic dispatch and receipt transaction",
+  );
+  assert(
+    (
+      await db
+        .prepare("SELECT status FROM drafts WHERE id='runtime-draft'")
+        .first()
+    ).status === "sent",
+    "compiled queue persists confirmed draft delivery",
+  );
+  await (await mf.getBindings()).TASKS.send({ id: queued.job });
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert(
+    providerRequests.filter((r) => r.method === "POST").length === 1,
+    "duplicate delivery cannot reach the provider twice",
+  );
+  const columns = Array.from({ length: 150 }, (_, i) => ({
+    key: `c${i}`,
+    name: `Column ${i}`,
+    type: "number",
+  }));
+  await api(`/tables/${table.id}`, "PATCH", { columns });
+  assert(
+    (await api(`/tables/${table.id}`)).columns.length === 150,
+    "150-column invalidation fits real D1 argument limits",
+  );
+  const cycle = await request(`/tables/${table.id}`, "PATCH", {
+    columns: [
+      {
+        key: "self",
+        name: "Self",
+        type: "formula",
+        config: { expression: "{{self}}+1" },
+      },
+    ],
+  });
+  assert(
+    cycle.status === 400,
+    "compiled route rejects self-referential formulas",
+  );
+  const foreignKey =
+    "foreign-workspace/photos/00000000-0000-4000-8000-000000000000";
+  const media = await mf.getR2Bucket("MEDIA");
+  await media.put(foreignKey, "private fixture");
+  await api(`/people/${person.id}`, "PATCH", {
+    custom: { photo_key: foreignKey },
+  });
+  assert(
+    (await request(`/people/${person.id}/photo`)).status === 404,
+    "compiled photo route rejects a forged foreign R2 key",
+  );
+  await api(`/people/${person.id}`, "DELETE");
+  assert(
+    !!(await media.head(foreignKey)),
+    "deleting a lead cannot delete a foreign R2 photo",
   );
   console.log(`Runtime smoke: ${count} passed`);
 } finally {

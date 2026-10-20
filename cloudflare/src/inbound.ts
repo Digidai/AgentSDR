@@ -1,7 +1,7 @@
 import { HTTPException } from "hono/http-exception";
 import type { Env, Row } from "./types";
 import { id, text } from "./core";
-import { enqueue, event } from "./jobs";
+import { enqueue } from "./jobs";
 export async function receive(
   env: Env,
   org: string,
@@ -57,55 +57,61 @@ export async function receive(
   }
   const message = text(body.body || body.message || body.text, 10000);
   if (!message) return { ignored: true, reason: "No message content" };
-  const mid = id();
-  const result = await env.DB.prepare(
-    "INSERT OR IGNORE INTO webhook_receipts(org_id,external_id) VALUES(?,?)",
-  )
-    .bind(org, `${channel}:${externalId}`)
-    .run();
-  if (!result.meta.changes) return { duplicate: true };
-  try {
-    await env.DB.batch([
-      env.DB.prepare(
-        "UPDATE people SET crm_context=crm_context+1 WHERE org_id=? AND id=? AND ?=0",
-      ).bind(org, person.id, body.historyOnly ? 1 : 0),
-      env.DB.prepare(
-        "INSERT INTO messages(id,org_id,person_id,channel,direction,subject,body,status,external_id) VALUES(?,?,?,?,'inbound',?,?,'received',?)",
-      ).bind(
-        mid,
-        org,
-        person.id,
-        channel,
-        text(body.subject, 300),
-        message,
-        externalId,
-      ),
-      env.DB.prepare(
-        "UPDATE drafts SET status='discarded' WHERE org_id=? AND id IN (SELECT draft_id FROM crm_enrollments WHERE org_id=? AND person_id=? AND status='active') AND status='pending' AND ?=0",
-      ).bind(org, org, person.id, body.historyOnly ? 1 : 0),
-      env.DB.prepare(
-        "UPDATE crm_enrollments SET status='stopped',draft_id=NULL WHERE org_id=? AND person_id=? AND status='active' AND ?=0",
-      ).bind(org, person.id, body.historyOnly ? 1 : 0),
-      env.DB.prepare(
-        "UPDATE enrollments SET status='replied' WHERE org_id=? AND person_id=? AND status='active' AND ?=0",
-      ).bind(org, person.id, body.historyOnly ? 1 : 0),
-    ]);
-  } catch (e) {
-    await env.DB.prepare(
-      "DELETE FROM webhook_receipts WHERE org_id=? AND external_id=?",
-    )
-      .bind(org, `${channel}:${externalId}`)
-      .run();
-    throw e;
-  }
-  if (body.crmEligible !== false && !body.historyOnly)
-    await enqueue(env, org, "crm", { person_id: person.id, message_id: mid });
-  await event(
-    env,
-    org,
-    "message.received",
-    `Reply received via ${channel}`,
-    person.id,
-  );
-  return { ok: true };
+  const mid = id(),
+    crmJob = `crm:${mid}`;
+  // The message, receipt, cancellation, context and durable CRM outbox commit
+  // together. A duplicate batch cannot apply cancellation or advance context.
+  const fresh = body.historyOnly ? 0 : 1;
+  const eligible = fresh && body.crmEligible !== false;
+  const ownsMessage = "EXISTS(SELECT 1 FROM messages WHERE id=?)";
+  const result = await env.DB.batch([
+    env.DB.prepare(
+      "INSERT OR IGNORE INTO messages(id,org_id,person_id,channel,direction,subject,body,status,external_id) VALUES(?,?,?,?,'inbound',?,?,'received',?)",
+    ).bind(
+      mid,
+      org,
+      person.id,
+      channel,
+      text(body.subject, 300),
+      message,
+      externalId,
+    ),
+    env.DB.prepare(
+      `UPDATE people SET crm_context=crm_context+1 WHERE org_id=? AND id=? AND ?=1 AND ${ownsMessage}`,
+    ).bind(org, person.id, fresh, mid),
+    env.DB.prepare(
+      `UPDATE drafts SET status='discarded' WHERE org_id=? AND id IN (SELECT draft_id FROM crm_enrollments WHERE org_id=? AND person_id=? AND status IN ('active','paused')) AND status IN ('pending','queued') AND ?=1 AND ${ownsMessage}`,
+    ).bind(org, org, person.id, fresh, mid),
+    env.DB.prepare(
+      `UPDATE crm_enrollments SET status='stopped' WHERE org_id=? AND person_id=? AND status IN ('active','paused') AND ?=1 AND ${ownsMessage}`,
+    ).bind(org, person.id, fresh, mid),
+    env.DB.prepare(
+      `UPDATE enrollments SET status='replied' WHERE org_id=? AND person_id=? AND status='active' AND ?=1 AND ${ownsMessage}`,
+    ).bind(org, person.id, fresh, mid),
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO jobs(id,org_id,kind,payload) SELECT ?,?,'crm',? WHERE ?=1 AND ${ownsMessage}`,
+    ).bind(
+      crmJob,
+      org,
+      JSON.stringify({ person_id: person.id, message_id: mid }),
+      eligible ? 1 : 0,
+      mid,
+    ),
+    env.DB.prepare(
+      `INSERT INTO events(id,org_id,type,detail,person_id) SELECT ?,?,'message.received',?,? WHERE ${ownsMessage}`,
+    ).bind(id(), org, `Reply received via ${channel}`, person.id, mid),
+    env.DB.prepare(
+      "INSERT OR IGNORE INTO webhook_receipts(org_id,external_id) VALUES(?,?)",
+    ).bind(org, `${channel}:${externalId}`),
+  ]);
+  if (!result[0].meta.changes) return { duplicate: true };
+  if (eligible)
+    await enqueue(
+      env,
+      org,
+      "crm",
+      { person_id: person.id, message_id: mid },
+      crmJob,
+    );
+  return { ok: true, id: mid, job: eligible ? crmJob : undefined };
 }

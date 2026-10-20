@@ -23,6 +23,7 @@ import {
   savePref,
   batches,
   convertField,
+  isPhotoKey,
 } from "./shared";
 import { authMail } from "./identity";
 import { renderAiInstructions } from "../ported/crm-instructions";
@@ -349,7 +350,8 @@ completeness.post("/calling/contacts/:id/photo", async (c) => {
   await c.env.MEDIA.put(key, await file.arrayBuffer(), {
     httpMetadata: { contentType: file.type },
   });
-  if (custom.photo_key) await c.env.MEDIA.delete(custom.photo_key);
+  if (isPhotoKey(orgId(c), custom.photo_key))
+    await c.env.MEDIA.delete(custom.photo_key);
   custom.photo_key = key;
   await c.env.DB.prepare("UPDATE people SET custom=? WHERE id=? AND org_id=?")
     .bind(JSON.stringify(custom), p.id, orgId(c))
@@ -359,7 +361,7 @@ completeness.post("/calling/contacts/:id/photo", async (c) => {
 completeness.get("/people/:id/photo", async (c) => {
   const p = await record(c.env, orgId(c), "people", c.req.param("id")),
     key = json<Row>(p.custom, {}).photo_key;
-  ensure(key, "No photo", 404);
+  ensure(isPhotoKey(orgId(c), key), "No photo", 404);
   const r = await c.env.MEDIA.get(key);
   ensure(r, "No photo", 404);
   return new Response(r.body, {

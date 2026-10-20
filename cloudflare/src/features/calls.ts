@@ -163,22 +163,8 @@ callFeatures.patch("/calls/:id", async (c) => {
     .run();
   if (r.contact_id)
     await outcome(c.env, orgId(c), r.contact_id, b.disposition, b.followUpAt);
-  if (b.disposition === "do_not_call") {
-    await c.env.DB.batch([
-      c.env.DB.prepare(
-        "UPDATE enrollments SET status='stopped' WHERE org_id=? AND person_id=? AND status='active'",
-      ).bind(orgId(c), r.person_id),
-      c.env.DB.prepare(
-        "UPDATE crm_enrollments SET status='stopped' WHERE org_id=? AND person_id=? AND status IN ('active','paused')",
-      ).bind(orgId(c), r.person_id),
-      c.env.DB.prepare(
-        "UPDATE drafts SET status='discarded' WHERE org_id=? AND person_id=? AND status IN ('pending','queued')",
-      ).bind(orgId(c), r.person_id),
-    ]);
-    await c.env.DB.prepare("UPDATE people SET dnc=1 WHERE id=? AND org_id=?")
-      .bind(r.person_id, orgId(c))
-      .run();
-  }
+  if (b.disposition === "do_not_call")
+    await doNotCall(c.env, orgId(c), r.person_id);
   if (b.disposition === "interested" || b.disposition === "meeting_booked")
     await c.env.DB.prepare("UPDATE people SET stage=? WHERE id=? AND org_id=?")
       .bind(
@@ -430,7 +416,7 @@ recorderRoutes.post("/call-recorder/calls/:id/finish", async (c) => {
     .first();
   if (changed && b.outcome === "recorded")
     await enqueue(c.env, r.org_id, "call-transcribe", { call_id: r.id });
-  if (r.contact_id)
+  if (changed && r.contact_id)
     await outcome(
       c.env,
       r.org_id,
@@ -441,6 +427,26 @@ recorderRoutes.post("/call-recorder/calls/:id/finish", async (c) => {
     call: callSummary(await record(c.env, r.org_id, "calls", r.id)),
   });
 });
+async function doNotCall(env: Env, org: string, personId: string) {
+  await env.DB.batch([
+    env.DB.prepare("UPDATE people SET dnc=1 WHERE id=? AND org_id=?").bind(
+      personId,
+      org,
+    ),
+    env.DB.prepare(
+      "UPDATE enrollments SET status='stopped' WHERE org_id=? AND person_id=? AND status='active'",
+    ).bind(org, personId),
+    env.DB.prepare(
+      "UPDATE crm_enrollments SET status='stopped' WHERE org_id=? AND person_id=? AND status IN ('active','paused')",
+    ).bind(org, personId),
+    env.DB.prepare(
+      "UPDATE drafts SET status='discarded' WHERE org_id=? AND person_id=? AND status IN ('pending','queued')",
+    ).bind(org, personId),
+    env.DB.prepare(
+      "UPDATE call_contacts SET call_status='do_not_call',stage='done' WHERE org_id=? AND person_id=?",
+    ).bind(org, personId),
+  ]);
+}
 async function outcome(
   env: Env,
   org: string,
@@ -448,7 +454,18 @@ async function outcome(
   value: string,
   follow?: string,
 ) {
+  ensure(
+    CONTACT_CALL_STATUSES.includes(value as any) ||
+      CALL_DISPOSITIONS.includes(value as any),
+    "Choose a valid call outcome",
+  );
   const r = await record(env, org, "call_contacts", contactId);
+  if (value === "do_not_call") {
+    await doNotCall(env, org, r.person_id);
+    return;
+  }
+  const person = await record(env, org, "people", r.person_id);
+  if (person.dnc || r.call_status === "do_not_call") return;
   let stage = "follow_up",
     attempts = r.unanswered_attempts,
     status = value;

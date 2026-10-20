@@ -5,6 +5,7 @@ import { fromB64, toB64, id, json, now, sign, text, escapeHtml } from "../core";
 import { integration, requestJson, ProviderError } from "../providers";
 import { receive } from "../inbound";
 import { record } from "./shared";
+import { PacingWait } from "./channels";
 const enc = new TextEncoder();
 export const base64url = (input: Uint8Array | string) =>
   toB64(typeof input === "string" ? enc.encode(input) : input)
@@ -217,6 +218,40 @@ export async function sendGmail(
   };
 }
 export async function syncGmail(env: Env, org: string, accountId: string) {
+  const key = `gmail-sync-lock:${accountId}`,
+    claim = id();
+  const lease = () => JSON.stringify({ claim, until: Date.now() + 5 * 60000 });
+  const acquired = await env.DB.prepare(
+    "INSERT INTO preferences(org_id,key,value) VALUES(?,?,?) ON CONFLICT(org_id,key) DO UPDATE SET value=excluded.value WHERE json_extract(preferences.value,'$.until')<? RETURNING key",
+  )
+    .bind(org, key, lease(), Date.now())
+    .first();
+  if (!acquired) throw new PacingWait("Mailbox sync already in progress", 30);
+  const renew = async () => {
+    const row = await env.DB.prepare(
+      "UPDATE preferences SET value=? WHERE org_id=? AND key=? AND json_extract(value,'$.claim')=? RETURNING key",
+    )
+      .bind(lease(), org, key, claim)
+      .first();
+    if (!row)
+      throw new PacingWait("Mailbox sync lease changed; retry safely", 30);
+  };
+  try {
+    await syncGmailPage(env, org, accountId, renew);
+  } finally {
+    await env.DB.prepare(
+      "DELETE FROM preferences WHERE org_id=? AND key=? AND json_extract(value,'$.claim')=?",
+    )
+      .bind(org, key, claim)
+      .run();
+  }
+}
+async function syncGmailPage(
+  env: Env,
+  org: string,
+  accountId: string,
+  renew: () => Promise<void>,
+) {
   const account = await record(env, org, "channel_accounts", accountId);
   if (account.status !== "connected" || account.channel !== "email") return;
   // A page is committed only after every message has persisted. On a retry the
@@ -248,13 +283,16 @@ export async function syncGmail(env: Env, org: string, accountId: string) {
       !String((error as Error).message).includes("404")
     )
       throw error;
+    const profile = await gmail(env, org, account.address, "profile");
+    await renew();
     await savePref(env, org, stateKey, {
       mode: "full",
-      baseline: (await gmail(env, org, account.address, "profile")).historyId,
+      baseline: profile.historyId,
     });
     await enqueue(env, org, "gmail-sync", { account_id: account.id });
     return;
   }
+  await renew();
   const ids = new Set<string>(
     state.mode === "history"
       ? (listed.history || [])
@@ -279,6 +317,7 @@ export async function syncGmail(env: Env, org: string, accountId: string) {
       if (String((error as Error).message).includes("404")) continue;
       throw error;
     }
+    await renew();
     const parsed = parseGmailMessage(raw);
     if (
       parsed.labels.includes("SENT") ||
@@ -304,10 +343,11 @@ export async function syncGmail(env: Env, org: string, accountId: string) {
     });
     await enqueue(env, org, "gmail-sync", { account_id: account.id });
   } else {
-    await env.DB.prepare(
-      "UPDATE channel_accounts SET history_id=?,last_sync_at=?,error='' WHERE id=? AND org_id=?",
-    )
-      .bind(
+    await renew();
+    await env.DB.batch([
+      env.DB.prepare(
+        "UPDATE channel_accounts SET history_id=?,last_sync_at=?,error='' WHERE id=? AND org_id=?",
+      ).bind(
         String(
           state.mode === "full"
             ? state.baseline
@@ -316,9 +356,12 @@ export async function syncGmail(env: Env, org: string, accountId: string) {
         now(),
         account.id,
         org,
-      )
-      .run();
-    await savePref(env, org, stateKey, {});
+      ),
+      env.DB.prepare("DELETE FROM preferences WHERE org_id=? AND key=?").bind(
+        org,
+        stateKey,
+      ),
+    ]);
   }
 }
 export async function watchMailbox(env: Env, org: string, accountId: string) {
