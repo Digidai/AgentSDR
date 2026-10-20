@@ -45,7 +45,8 @@ export async function requestJson(
   try {
     response = await fetch(url, {
       ...init,
-      redirect: "error",
+      // workerd supports manual/follow, but rejects redirect: "error" before I/O.
+      redirect: "manual",
       signal: AbortSignal.timeout(25000),
     });
   } catch {
@@ -54,6 +55,12 @@ export async function requestJson(
       mutates,
     );
   }
+  if (response.status >= 300 && response.status < 400)
+    throw new ProviderError(
+      "Provider redirect refused. Check the integration endpoint.",
+      mutates,
+      response.status,
+    );
   const result = (await response.json().catch(() => ({}))) as Row;
   if (!response.ok)
     throw new ProviderError(
@@ -71,10 +78,33 @@ export function unipileBase(config: Row) {
 }
 export async function validateIntegration(kind: string, config: Row) {
   if (kind === "resend") {
-    await requestJson("https://api.resend.com/domains", {
-      headers: { Authorization: `Bearer ${config.api_key}` },
-    });
-    if (!config.from_address) throw new Error("Set a verified sender address");
+    config.api_key = String(config.api_key || "").trim();
+    config.from_address = String(config.from_address || "").trim();
+    if (!config.api_key) throw new Error("请填写 Resend API Key。");
+    if (!config.from_address)
+      throw new Error("请填写已在 Resend 验证域名的发件地址。");
+    try {
+      await requestJson("https://api.resend.com/domains", {
+        headers: { Authorization: `Bearer ${config.api_key}` },
+      });
+    } catch (error) {
+      if (!(error instanceof ProviderError)) throw error;
+      if (error.status === 401)
+        throw new Error(
+          "Resend API Key 无效或已撤销（HTTP 401）。请在 Resend 重新创建密钥。",
+        );
+      if (error.status === 403)
+        throw new Error(
+          "Resend 拒绝读取域名（HTTP 403）。此验证需要 Full access 的 API Key；仅 Sending access 无法验证。请同时确认密钥属于正确的 Resend 账号。",
+        );
+      if (error.status === 429)
+        throw new Error("Resend 请求过于频繁（HTTP 429）。请稍后重试。");
+      if (!error.status)
+        throw new Error("暂时无法连接 Resend，可能是连接超时。请稍后重试。");
+      throw new Error(
+        `Resend 验证失败（HTTP ${error.status}）。请检查 Resend 服务状态后重试。`,
+      );
+    }
   } else if (kind === "openrouter") {
     await requestJson("https://openrouter.ai/api/v1/key", {
       headers: { Authorization: `Bearer ${config.api_key}` },

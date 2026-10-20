@@ -496,7 +496,7 @@ export async function qualifyProspect(
   try {
     const url = publicUrl("https://" + p.domain),
       response = await fetch(url, {
-        redirect: "error",
+        redirect: "manual",
         signal: AbortSignal.timeout(15000),
       });
     if (

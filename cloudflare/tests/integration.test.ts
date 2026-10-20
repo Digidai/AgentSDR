@@ -218,6 +218,87 @@ describe("real SQLite API and task integration", () => {
     ).toBe(400);
     expect((await data(`/api/campaigns/${campaign}`)).steps).toHaveLength(2);
   });
+  it.each([
+    [401, "无效或已撤销"],
+    [403, "Full access"],
+    [429, "过于频繁"],
+    [503, "Resend 验证失败"],
+  ])(
+    "reports Resend HTTP %s without storing rejected credentials",
+    async (status, message) => {
+      const mock = vi.fn(async (_url: string | URL) =>
+        Response.json(
+          {
+            name: "restricted_api_key",
+            message: "This API key is restricted to only send emails",
+          },
+          { status: Number(status) },
+        ),
+      );
+      vi.stubGlobal("fetch", mock);
+      try {
+        const response = await request("/api/integrations/resend", "POST", {
+          api_key: "re_test_sending_only",
+          from_address: "owner@example.com",
+        });
+        expect(response.status).toBe(400);
+        const error = ((await response.json()) as { error: string }).error;
+        expect(error).toContain(`HTTP ${status}`);
+        expect(error).toContain(message);
+        expect(error).not.toContain("re_test_sending_only");
+        expect(
+          await env.DB.prepare(
+            "SELECT kind FROM integrations WHERE org_id=? AND kind='resend'",
+          )
+            .bind(org)
+            .first(),
+        ).toBeNull();
+        expect(mock).toHaveBeenCalledOnce();
+        expect(mock.mock.calls[0][0]).toBe("https://api.resend.com/domains");
+      } finally {
+        vi.unstubAllGlobals();
+        await env.DB.prepare(
+          "DELETE FROM integrations WHERE org_id=? AND kind='resend'",
+        )
+          .bind(org)
+          .run();
+      }
+    },
+  );
+  it("validates and encrypts Resend credentials through the settings API", async () => {
+    const mock = vi.fn(async () =>
+      Response.json({
+        data: [{ id: "domain-1", name: "example.com", status: "verified" }],
+        has_more: false,
+      }),
+    );
+    vi.stubGlobal("fetch", mock);
+    try {
+      const response = await request("/api/integrations/resend", "POST", {
+        api_key: "re_test_full_access",
+        from_address: "owner@example.com",
+      });
+      expect(response.status).toBe(200);
+      const saved = await env.DB.prepare(
+        "SELECT encrypted FROM integrations WHERE org_id=? AND kind='resend'",
+      )
+        .bind(org)
+        .first<{ encrypted: string }>();
+      expect(saved?.encrypted).toBeTruthy();
+      expect(saved?.encrypted).not.toContain("re_test_full_access");
+      expect(JSON.stringify(await data("/api/settings"))).not.toContain(
+        "re_test_full_access",
+      );
+      expect(mock).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+      await env.DB.prepare(
+        "DELETE FROM integrations WHERE org_id=? AND kind='resend'",
+      )
+        .bind(org)
+        .run();
+    }
+  });
   it("encrypts provider keys and never returns them from settings", async () => {
     await env.DB.prepare(
       "INSERT INTO integrations(org_id,kind,encrypted) VALUES(?,?,?)",

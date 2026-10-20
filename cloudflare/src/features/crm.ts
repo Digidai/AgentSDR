@@ -10,9 +10,9 @@ import {
   render,
   text,
 } from "../core";
-import { requireAdmin } from "../auth";
+import { limit, requireAdmin } from "../auth";
 import { enqueue } from "../jobs";
-import { generate, integration, validateIntegration } from "../providers";
+import { generate, integration } from "../providers";
 import {
   ensure,
   orgId,
@@ -748,10 +748,13 @@ crmFeatures.get("/ai/models", async (c) => {
   ensure(response.ok, "Model catalog is unavailable");
   return c.json(await response.json());
 });
-crmFeatures.post("/integrations/:kind", async (c) => {
+crmFeatures.post("/integrations/:kind", async (c, next) => {
+  const kind = c.req.param("kind");
+  // Shared providers must retain the base route's validation errors and limits.
+  if (!["google-workspace", "google-signin"].includes(kind)) return next();
   requireAdmin(c);
-  const kind = c.req.param("kind"),
-    b = await c.req.json<Row>();
+  const b = await c.req.json<Row>();
+  await limit(c.env, `integration:${orgId(c)}`, 20, 3600);
   if (kind === "google-workspace") {
     ensure(
       b.client_email && b.private_key && emailValid(String(b.test_email || "")),
@@ -772,7 +775,7 @@ crmFeatures.post("/integrations/:kind", async (c) => {
       b.webhook_secret || crypto.randomUUID() + crypto.randomUUID();
   } else if (kind === "google-signin") {
     ensure(b.client_id && b.client_secret, "Client ID and secret are required");
-  } else await validateIntegration(kind, b);
+  }
   await c.env.DB.prepare(
     "INSERT INTO integrations(org_id,kind,encrypted,label) VALUES(?,?,?,?) ON CONFLICT(org_id,kind) DO UPDATE SET encrypted=excluded.encrypted,label=excluded.label,updated_at=?",
   )

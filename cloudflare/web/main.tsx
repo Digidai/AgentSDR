@@ -2792,7 +2792,9 @@ function SettingsPage({
         >
           <p className="muted">
             密钥加密保存，后续不会在页面中显示。
-            {connect === "resend" ? "验证连接需要可读取域名的 API Key。" : ""}
+            {connect === "resend"
+              ? "验证需要 Resend 的 Full access API Key；仅 Sending access 无法读取域名。发件地址的域名也需先在 Resend 完成验证。验证连接不会发送邮件。"
+              : ""}
           </p>
           <form
             onSubmit={(e) => {

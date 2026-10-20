@@ -31,6 +31,8 @@ Open the private `/#setup=...` link supplied with deployment, create the owner, 
 - Calling: use Chrome 116+, unzip the authenticated recorder download, load it from `chrome://extensions` in developer mode and log in to WhatsApp Web. Grant the recorder's requested permissions. A real call and microphone recording require human verification.
 - Authentication email and invitation delivery need a configured Resend sender. Google sign-in needs OAuth client credentials; callback is `https://sdr.genedai.me/api/auth/callback/google`.
 
+For Resend connection verification, use a **Full access** API key from the correct Resend account: the read-only `/domains` check is unavailable to **Sending access** keys. The sender's exact domain must be verified in that account before actual delivery. Connection verification never sends an email. Invalid keys, insufficient permissions and connection failures now appear as specific validation messages.
+
 Keys are encrypted with AES-GCM and excluded from API reads. Preserve the Worker encryption secret with your D1 backup. Provider subscriptions and credentials are external dependencies; fixture tests do not establish real delivery or account permissions.
 
 ## Develop, verify, deploy
